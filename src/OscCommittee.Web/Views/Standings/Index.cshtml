@@ -1,0 +1,91 @@
+@model StandingsViewModel
+@{
+    ViewData["Title"] = "Standings";
+}
+<div class="flex flex-col gap-6">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+            <p class="card-meta">Community</p>
+            <h1 class="mt-1 text-[26px] font-semibold leading-tight tracking-tight">Standings</h1>
+        </div>
+        @if (Model.View == StandingsView.Detail)
+        {
+            <a href="/standings" class="chip chip-strong">
+                <i class="fa-solid fa-arrow-left text-[11px]" aria-hidden="true"></i>
+                All members
+            </a>
+        }
+        else
+        {
+            <span class="chip">
+                <i class="fa-solid fa-calculator text-[11px] text-muted" aria-hidden="true"></i>
+                @Model.RankingNote
+            </span>
+        }
+    </div>
+
+    <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex flex-wrap items-center gap-2">
+            <nav class="inline-flex rounded-input border border-border bg-surface p-1" aria-label="Standings ranking">
+                @foreach (var link in Model.Tabs)
+                {
+                    <a href="@link.Href"
+                       aria-current="@(link.IsActive ? "page" : null)"
+                       class="rounded-lg px-3 py-1.5 text-sm transition-colors @(link.IsActive ? "bg-accent-soft font-semibold text-accent" : "text-muted hover:bg-surface-2 hover:text-text")">
+                        @link.Label
+                    </a>
+                }
+            </nav>
+        </div>
+
+        @if (Model.IsBoard)
+        {
+            if (Model.IncludeDeactivated)
+            {
+                <a href="@Model.ExcludeDeactivatedHref" class="chip chip-strong">
+                    <i class="fa-solid fa-eye-slash text-[11px]" aria-hidden="true"></i>
+                    Hide deactivated
+                </a>
+            }
+            else
+            {
+                <a href="@Model.IncludeDeactivatedHref" class="chip">
+                    <i class="fa-solid fa-user-slash text-[11px] text-muted" aria-hidden="true"></i>
+                    Include deactivated
+                </a>
+            }
+        }
+    </div>
+
+    @if (Model.View == StandingsView.Summary)
+    {
+        @if (Model.Summary is { } summary)
+        {
+            <partial name="_Summary" model="summary" />
+        }
+        else
+        {
+            <partial name="_EmptyState" model="@(new EmptyStateModel {
+                Icon = "fa-solid fa-ranking-star",
+                Title = "Standings are not open yet",
+                Description = "They appear as soon as a month sheet is open."
+            })" />
+        }
+    }
+    else if (Model.Detail is { } detail)
+    {
+        <partial name="_Detail" model="detail" />
+    }
+    else
+    {
+        <partial name="_EmptyState" model="@(new EmptyStateModel {
+            Icon = "fa-solid fa-users",
+            Title = "No members to show",
+            Description = "Standings fill in once active members exist."
+        })" />
+    }
+</div>
+
+@section Scripts {
+    <script src="~/js/countdown.js" asp-append-version="true"></script>
+}

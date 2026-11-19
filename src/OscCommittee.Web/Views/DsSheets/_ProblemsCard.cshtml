@@ -1,0 +1,153 @@
+@model DsProblemsPanelViewModel
+<section class="card overflow-hidden" id="problems">
+    <div class="card-header">
+        <div class="flex items-center gap-2">
+            <h2 class="card-title">Problems</h2>
+            <span class="chip nums">@Model.Problems.Count</span>
+        </div>
+    </div>
+
+    <div class="border-b border-border px-4 py-4 sm:px-5" data-sheet-edit-only
+         hidden="@(Model.ReadOnly ? "hidden" : null)">
+        <form method="post" asp-controller="DsSheets" asp-action="AddProblems" asp-route-id="@Model.SheetId"
+              class="flex flex-col gap-3">
+            <div>
+                <label for="new-problem-links" class="label">Add problems</label>
+                <textarea id="new-problem-links" name="links" rows="2" required
+                          autocomplete="off" spellcheck="false"
+                          class="input h-auto min-h-20 py-2 font-mono text-[12px]"
+                          placeholder="https://codeforces.com/problemset/problem/4/A&#10;https://leetcode.com/problems/two-sum/">@Model.NewLinks</textarea>
+                <p class="hint">One Codeforces or LeetCode link per line.</p>
+            </div>
+
+            @if (Model.AddErrors.Count > 0)
+            {
+                <div class="rounded-input border border-danger/30 bg-danger/10 px-3 py-2" role="alert">
+                    <ul class="list-disc space-y-1 pl-4 text-[13px] leading-relaxed text-danger">
+                        @foreach (var error in Model.AddErrors)
+                        {
+                            <li>@error</li>
+                        }
+                    </ul>
+                </div>
+            }
+
+            <div class="flex flex-wrap items-end justify-between gap-3">
+                <div class="w-44">
+                    <label for="new-problem-difficulty" class="label">Difficulty</label>
+                    <select id="new-problem-difficulty" name="difficulty" class="input">
+                        <option value="@Difficulty.Easy" selected="@(Model.NewDifficulty == Difficulty.Easy ? "selected" : null)">
+                            Easy · @Model.Presets.Easy pts
+                        </option>
+                        <option value="@Difficulty.Medium" selected="@(Model.NewDifficulty == Difficulty.Medium ? "selected" : null)">
+                            Medium · @Model.Presets.Medium pts
+                        </option>
+                        <option value="@Difficulty.Hard" selected="@(Model.NewDifficulty == Difficulty.Hard ? "selected" : null)">
+                            Hard · @Model.Presets.Hard pts
+                        </option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fa-solid fa-plus text-[10px]" aria-hidden="true"></i>
+                    Add to sheet
+                </button>
+            </div>
+        </form>
+    </div>
+
+    @if (Model.Problems.Count == 0)
+    {
+        <div class="card-body">
+            <p class="text-sm text-muted">
+                @(Model.ReadOnly
+                    ? "No problems on this sheet yet."
+                    : "No problems yet. Paste a link above to add the first one.")
+            </p>
+        </div>
+    }
+    else
+    {
+        <div class="overflow-x-auto">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th scope="col" class="w-10 text-right">#</th>
+                        <th scope="col">Problem</th>
+                        <th scope="col">Difficulty</th>
+                        <th scope="col" class="text-right">Points</th>
+                        <th scope="col" class="text-right">Solvers</th>
+                        <th scope="col" class="text-right" data-sheet-edit-only
+                            hidden="@(Model.ReadOnly ? "hidden" : null)">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{ var position = 0; }
+                    @foreach (var problem in Model.Problems)
+                    {
+                        position++;
+                        <tr>
+                            <td class="nums text-right text-muted">@position</td>
+                            <td>
+                                <div class="flex flex-wrap items-center gap-1.5">
+                                    <span class="badge @problem.PlatformBadgeClass">@problem.PlatformLabel</span>
+                                    <a href="@problem.Url" target="_blank" rel="noopener noreferrer"
+                                       class="text-sm font-medium text-text hover:text-accent">@problem.Title</a>
+                                    @if (problem.IsPaidOnly)
+                                    {
+                                        <span class="badge badge-hard">Premium</span>
+                                    }
+                                </div>
+                                <p class="mt-0.5 font-mono text-[11px] text-muted">@problem.ExternalId</p>
+                            </td>
+                            <td>
+                                <span class="badge @problem.DifficultyBadgeClass">@problem.DifficultyLabel</span>
+                                @if (problem.Rating is { } rating)
+                                {
+                                    <p class="mt-1 text-[11px] text-muted nums">rating @rating</p>
+                                }
+                            </td>
+                            <td class="nums text-right">
+                                <span class="text-sm font-medium text-text">@problem.Points</span>
+                                @if (problem.PointsOverride is not null)
+                                {
+                                    <p class="text-[11px] text-muted">override</p>
+                                }
+                            </td>
+                            <td class="nums text-right">
+                                <a asp-controller="DsProblems" asp-action="Solvers" asp-route-id="@problem.Id"
+                                   class="text-sm text-accent hover:text-accent-hover">@problem.SolveCount</a>
+                            </td>
+                            <td data-sheet-edit-only hidden="@(Model.ReadOnly ? "hidden" : null)">
+                                <div class="flex flex-wrap items-center justify-end gap-1.5">
+                                    <form method="post" asp-controller="DsProblems" asp-action="Move" asp-route-id="@problem.Id">
+                                        <input type="hidden" name="direction" value="-1" />
+                                        <button type="submit" class="btn btn-sm" disabled="@(problem.IsFirst ? "disabled" : null)"
+                                                title="Move up" aria-label="Move @problem.Title up">
+                                            <i class="fa-solid fa-arrow-up text-[10px]" aria-hidden="true"></i>
+                                        </button>
+                                    </form>
+                                    <form method="post" asp-controller="DsProblems" asp-action="Move" asp-route-id="@problem.Id">
+                                        <input type="hidden" name="direction" value="1" />
+                                        <button type="submit" class="btn btn-sm" disabled="@(problem.IsLast ? "disabled" : null)"
+                                                title="Move down" aria-label="Move @problem.Title down">
+                                            <i class="fa-solid fa-arrow-down text-[10px]" aria-hidden="true"></i>
+                                        </button>
+                                    </form>
+                                    <form method="post" asp-controller="DsProblems" asp-action="Delete" asp-route-id="@problem.Id"
+                                          data-confirm="Members will no longer see this problem. Problems with credited solves cannot be deleted."
+                                          data-confirm-title="Remove @problem.Title?"
+                                          data-confirm-label="Remove">
+                                        <button type="submit" class="btn btn-sm text-danger">
+                                            <i class="fa-solid fa-trash-can text-[10px]" aria-hidden="true"></i>
+                                            Remove
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>

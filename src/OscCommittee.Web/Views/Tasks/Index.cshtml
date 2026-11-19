@@ -1,0 +1,136 @@
+@model TasksViewModel
+@{
+    var active = Model.Active;
+}
+<div class="flex flex-col gap-6">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+            <p class="card-meta">@Model.MonthLabel</p>
+            <h1 class="mt-1 text-[26px] font-semibold leading-tight tracking-tight">C# tasks</h1>
+        </div>
+        @if (Model.Groups.Count > 0)
+        {
+            <span class="chip">
+                <i class="fa-solid fa-code text-[11px] text-muted" aria-hidden="true"></i>
+                <span class="nums">@Model.TaskCount</span>
+                @(Model.TaskCount == 1 ? "task" : "tasks")
+            </span>
+        }
+    </div>
+
+    @if (Model.Groups.Count > 0)
+    {
+        <section aria-label="Current task">
+            @if (active is null)
+            {
+                <partial name="_EmptyState" model="@(new EmptyStateModel {
+                    Icon = "fa-solid fa-code",
+                    Title = "No current task",
+                    Description = "Visible tasks are still listed below."
+                })" />
+            }
+            else
+            {
+                <article class="card border-accent/30 bg-accent-soft/20">
+                    <div class="card-body">
+                        <div class="flex flex-wrap items-start justify-between gap-4">
+                            <div class="min-w-0">
+                                <span class="chip chip-strong">
+                                    <i class="fa-solid fa-bolt text-[11px]" aria-hidden="true"></i>
+                                    Current
+                                </span>
+                                <h2 class="mt-3 text-xl font-semibold tracking-tight text-text">@active.Title</h2>
+                                <p class="mt-1 text-sm text-muted">@active.MonthLabel</p>
+                                <p class="mt-3 text-sm text-muted">
+                                    <i class="fa-regular fa-clock mr-1.5 text-xs" aria-hidden="true"></i>
+                                    Deadline <span class="nums font-medium text-text">@active.DueLabel</span>
+                                </p>
+                                <p class="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-muted">
+                                    <span data-countdown-to="@active.DueIso">@(active.IsOverdue ? "overdue" : "soon")</span>
+                                    <span class="nums">· @active.MaxPoints pts max</span>
+                                    @if (active.IsOverdue)
+                                    {
+                                        <span>· Late uploads are still accepted, but marked late.</span>
+                                    }
+                                </p>
+                            </div>
+                            <a asp-controller="Tasks" asp-action="Detail" asp-route-id="@active.Id" class="btn btn-primary shrink-0">
+                                Open task
+                                <i class="fa-solid fa-arrow-right text-xs" aria-hidden="true"></i>
+                            </a>
+                        </div>
+                    </div>
+                </article>
+            }
+        </section>
+    }
+
+    <section class="flex flex-col gap-3" aria-label="All tasks">
+        <div class="flex items-center justify-between gap-3">
+            <h2 class="section-title">All tasks</h2>
+        </div>
+
+        @if (Model.Groups.Count == 0)
+        {
+            <partial name="_EmptyState" model="@(new EmptyStateModel {
+                Icon = "fa-solid fa-code",
+                Title = "No tasks yet",
+                Description = "Published tasks will appear here."
+            })" />
+        }
+        else
+        {
+            @foreach (var group in Model.Groups)
+            {
+                <details class="accordion card overflow-hidden" open="@(group.IsCurrent ? "open" : null)">
+                    <summary class="card-header gap-3">
+                        <span class="flex min-w-0 items-center gap-2.5">
+                            <i class="accordion-chevron fa-solid fa-chevron-right text-[10px] text-muted" aria-hidden="true"></i>
+                            <span class="card-title">@group.Label</span>
+                            @if (group.IsCurrent)
+                            {
+                                <span class="badge badge-active">Current</span>
+                            }
+                        </span>
+                        <span class="chip shrink-0">
+                            <span class="nums">@group.Tasks.Count</span>
+                            @(group.Tasks.Count == 1 ? "task" : "tasks")
+                        </span>
+                    </summary>
+
+                    <div class="grid gap-3 p-4 sm:grid-cols-2">
+                        @foreach (var task in group.Tasks)
+                        {
+                            <a asp-controller="Tasks" asp-action="Detail" asp-route-id="@task.Id"
+                               class="rounded-card border border-border bg-surface p-4 transition-colors hover:border-accent/40 hover:bg-surface-2">
+                                <div class="flex items-start justify-between gap-2">
+                                    <h3 class="text-sm font-semibold text-text">@task.Title</h3>
+                                    <span class="badge @task.StateBadgeClass shrink-0">@task.StateLabel</span>
+                                </div>
+
+                                <p class="mt-2.5 flex items-center gap-1.5 text-xs text-muted">
+                                    <i class="fa-regular fa-clock text-[11px]" aria-hidden="true"></i>
+                                    Deadline
+                                    <span class="nums text-text" data-countdown-to="@task.DueIso">@(task.IsOverdue ? "overdue" : "soon")</span>
+                                </p>
+                                <p class="mt-1 text-[11px] text-muted/70 nums">@task.DueLabel</p>
+
+                                <div class="mt-3 flex items-center justify-between gap-2 border-t border-border/60 pt-3">
+                                    <span class="text-[11px] text-muted">
+                                        <span class="nums">@task.MaxPoints</span> pts max · best
+                                        <span class="nums">@task.BestScoreLabel</span> · @task.AttemptsLabel
+                                    </span>
+                                    <span class="text-[11px] font-medium text-accent">Open task →</span>
+                                </div>
+                            </a>
+                        }
+                    </div>
+                </details>
+            }
+        }
+    </section>
+</div>
+
+@section Scripts {
+    <script src="~/js/countdown.js" asp-append-version="true"></script>
+}

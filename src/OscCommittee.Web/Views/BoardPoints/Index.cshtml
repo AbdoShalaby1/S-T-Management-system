@@ -1,0 +1,87 @@
+@model PointsIndexViewModel
+<div class="flex flex-col gap-6">
+    <div>
+        <nav class="flex flex-wrap items-center gap-2 text-xs text-muted" aria-label="Breadcrumb">
+            <a asp-controller="Board" asp-action="Index" class="hover:text-text">Board</a>
+            <i class="fa-solid fa-chevron-right text-[9px]" aria-hidden="true"></i>
+            <span class="text-text">Points</span>
+        </nav>
+        <h1 class="mt-2 text-[26px] font-semibold leading-tight tracking-tight">Points</h1>
+        <p class="mt-1 text-sm text-muted">Every member's points. Open a member to see the problems, tasks and bonuses behind them.</p>
+    </div>
+
+    <section class="grid gap-4 sm:grid-cols-3">
+        <article class="stat-tile">
+            <p class="stat-label">Members</p>
+            <p class="stat-value">@Model.MemberCount</p>
+        </article>
+        <article class="stat-tile">
+            <p class="stat-label">@Model.MonthLabel</p>
+            <p class="stat-value">@Model.MonthPoints</p>
+        </article>
+        <article class="stat-tile">
+            <p class="stat-label">All time</p>
+            <p class="stat-value">@Model.AllTimePoints</p>
+        </article>
+    </section>
+
+    <section class="card overflow-hidden">
+        @if (Model.Members.Count == 0)
+        {
+            <div class="card-body">
+                <partial name="_EmptyState" model="@(new EmptyStateModel {
+                    Icon = "fa-solid fa-coins",
+                    Title = "No members yet",
+                    Description = "Approved members show up here with the points they earn from solves, tasks and bonuses."
+                })" />
+            </div>
+        }
+        else
+        {
+            <div class="overflow-x-auto">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Member</th>
+                            <th scope="col" class="text-right">@Model.MonthLabel</th>
+                            <th scope="col" class="text-right">All time</th>
+                            <th scope="col">Status</th>
+                            <th scope="col" class="text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var member in Model.Members)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="flex items-center gap-2.5">
+                                        <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-2 text-[10px] font-semibold uppercase text-muted"
+                                              aria-hidden="true">@member.Initials</span>
+                                        <div class="min-w-0">
+                                            <a asp-action="Member" asp-route-id="@member.Id"
+                                               class="truncate text-sm font-medium text-text hover:text-accent">@member.DisplayName</a>
+                                            <p class="truncate text-xs text-muted">@member.Email</p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="nums text-right font-medium text-text">@member.MonthPoints</td>
+                                <td class="nums text-right text-muted">@member.AllTimePoints</td>
+                                <td>
+                                    <span class="badge @member.StatusBadgeClass">@member.StatusLabel</span>
+                                </td>
+                                <td>
+                                    <div class="flex justify-end">
+                                        <a asp-action="Member" asp-route-id="@member.Id" class="btn btn-sm">
+                                            <i class="fa-solid fa-arrow-right text-[10px]" aria-hidden="true"></i>
+                                            Open
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+</div>

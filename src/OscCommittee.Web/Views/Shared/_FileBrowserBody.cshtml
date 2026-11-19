@@ -1,0 +1,62 @@
+@model FileBrowserModel
+@{
+    var files = Model.View.Files;
+}
+<div class="grid gap-0 md:grid-cols-[220px_minmax(0,1fr)]">
+    <nav class="max-h-56 overflow-auto border-b border-border/60 p-2 md:max-h-[60vh] md:border-b-0 md:border-r"
+         aria-label="@Model.Heading files">
+        <ul class="flex flex-col gap-0.5">
+            @foreach (var item in files)
+            {
+                var separator = item.Path.LastIndexOf('/');
+                var depth = separator < 0 ? 0 : item.Path.Count(character => character == '/');
+                var name = separator < 0 ? item.Path : item.Path[(separator + 1)..];
+                var folder = separator < 0 ? null : item.Path[..separator];
+                var isSelected = string.Equals(item.Path, Model.SelectedPath, StringComparison.Ordinal);
+
+                <li>
+                    <a href="@(Model.FileUrl?.Invoke(item.Path) ?? "#")"
+                       data-file-browser-link
+                       class="flex items-center gap-1.5 rounded px-2 py-1.5 text-xs @(isSelected ? "bg-surface-2 text-text font-medium" : "text-muted hover:bg-surface-2/60 hover:text-text")"
+                       style="@($"padding-left: {0.5 + depth * 0.75:0.##}rem")"
+                       title="@item.Path">
+                        <i class="fa-regular fa-file-lines text-[10px] shrink-0" aria-hidden="true"></i>
+                        <span class="truncate">@name</span>
+                        <span class="ml-auto shrink-0 font-mono text-[9px] text-muted/60">@FileBrowserModel.SizeLabel(item.Bytes)</span>
+                    </a>
+                    @if (!string.IsNullOrEmpty(folder) && isSelected)
+                    {
+                        <p class="truncate pb-1 pl-6 font-mono text-[9px] text-muted/60">@folder</p>
+                    }
+                </li>
+            }
+        </ul>
+    </nav>
+
+    <div class="min-w-0 p-3">
+        @if (!string.IsNullOrWhiteSpace(Model.FileError))
+        {
+            <div class="mb-3 rounded-input border border-warning/30 bg-warning/10 px-3 py-2 text-xs leading-relaxed text-warning">
+                @Model.FileError
+            </div>
+        }
+
+        @if (Model.SelectedContent is not null)
+        {
+            <partial name="_CodeBlock" model="@(new CodeBlockModel(
+                Model.SelectedContent!,
+                Model.SelectedPath,
+                Model.SelectedLanguage))" />
+            @if (Model.SelectedTruncated)
+            {
+                <p class="hint mt-2">
+                    Display truncated at 120 000 characters. Download the files to read the rest.
+                </p>
+            }
+        }
+        else
+        {
+            <p class="px-1 py-6 text-sm text-muted">Pick a file on the left to read it.</p>
+        }
+    </div>
+</div>

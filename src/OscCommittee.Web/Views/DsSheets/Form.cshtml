@@ -1,0 +1,197 @@
+@model DsSheetFormViewModel
+@{
+    var isEdit = Model.IsEdit;
+    var readOnly = isEdit && ViewData.ModelState.IsValid && Model.AddProblemErrors.Count == 0;
+    var heading = isEdit ? (readOnly ? "View DS sheet" : "Edit DS sheet") : "New DS sheet";
+    var crumb = isEdit ? (readOnly ? "View" : "Edit") : "New";
+    var disabled = readOnly ? "disabled" : null;
+    var activeBlocked = isEdit && Model.Problems.Count == 0 && !Model.IsActive;
+}
+<div class="flex flex-col gap-6">
+    <div class="flex flex-wrap items-start justify-between gap-3">
+        <div>
+            <nav class="flex flex-wrap items-center gap-2 text-xs text-muted" aria-label="Breadcrumb">
+                <a asp-controller="Board" asp-action="Index" class="hover:text-text">Board</a>
+                <i class="fa-solid fa-chevron-right text-[9px]" aria-hidden="true"></i>
+                <a asp-controller="DsSheets" asp-action="Index" class="hover:text-text">DS sheets</a>
+                <i class="fa-solid fa-chevron-right text-[9px]" aria-hidden="true"></i>
+                <span class="text-text" data-page-crumb>@crumb</span>
+            </nav>
+            <h1 class="mt-2 text-[26px] font-semibold leading-tight tracking-tight" data-page-heading>@heading</h1>
+        </div>
+
+        @if (isEdit)
+        {
+            <button type="button" class="btn btn-primary" data-enable-edit
+                    hidden="@(readOnly ? null : "hidden")">
+                <i class="fa-solid fa-pen text-xs" aria-hidden="true"></i>
+                Edit
+            </button>
+        }
+    </div>
+
+    <form method="post"
+          asp-controller="DsSheets"
+          asp-action="@(isEdit ? "Edit" : "Create")"
+          asp-route-id="@Model.Id"
+          class="card"
+          data-sheet-form>
+        <div class="card-body flex flex-col gap-5">
+            @if (!ViewData.ModelState.IsValid)
+            {
+                <div asp-validation-summary="ModelOnly"
+                     class="rounded-input border border-danger/30 bg-danger/10 px-3 py-2 text-[13px] leading-relaxed text-danger"></div>
+            }
+
+            <div>
+                <label asp-for="Title" class="label"></label>
+                <input asp-for="Title" class="input" placeholder="Sheet 2 — Graphs" autofocus
+                       data-sheet-field disabled="@disabled" />
+                <span asp-validation-for="Title" class="field-error"></span>
+                <input type="hidden" asp-for="SortOrder" />
+                <input type="hidden" asp-for="DescriptionMd" />
+            </div>
+
+            <div class="grid gap-4 sm:grid-cols-2">
+                <div>
+                    <label asp-for="MonthSheetId" class="label"></label>
+                    <select asp-for="MonthSheetId" class="input"
+                            data-sheet-field disabled="@disabled">
+                        <option value="">Pick a month…</option>
+                        @foreach (var month in Model.Months)
+                        {
+                            <option value="@month.Id">@month.Label@(month.IsCurrent ? " · current" : string.Empty)</option>
+                        }
+                    </select>
+                    <span asp-validation-for="MonthSheetId" class="field-error"></span>
+                </div>
+
+                <div>
+                    <label asp-for="DueLocal" class="label">Deadline</label>
+                    <input asp-for="DueLocal" type="date" class="input"
+                           data-sheet-field disabled="@disabled" />
+                    <span asp-validation-for="DueLocal" class="field-error"></span>
+                    <p class="hint">
+                        The deadline is the end of that day in <span class="font-medium text-text">@Model.TimeZoneId</span>.
+                    </p>
+                </div>
+            </div>
+
+            @if (!isEdit)
+            {
+                <div class="divider"></div>
+
+                <div class="flex flex-col gap-3" id="problems">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <h2 class="text-sm font-semibold text-text">Problems</h2>
+                        <span class="chip">Optional</span>
+                    </div>
+
+                    <div>
+                        <label asp-for="NewProblemLinks" class="label">Links</label>
+                        <textarea asp-for="NewProblemLinks" rows="3" autocomplete="off" spellcheck="false"
+                                  class="input h-auto min-h-24 py-2 font-mono text-[12px]"
+                                  placeholder="https://codeforces.com/problemset/problem/4/A&#10;https://leetcode.com/problems/two-sum/"></textarea>
+                        <p class="hint">One Codeforces or LeetCode link per line. They are added when you create the sheet.</p>
+                    </div>
+
+                    @if (Model.AddProblemErrors.Count > 0)
+                    {
+                        <div class="rounded-input border border-danger/30 bg-danger/10 px-3 py-2" role="alert">
+                            <ul class="list-disc space-y-1 pl-4 text-[13px] leading-relaxed text-danger">
+                                @foreach (var error in Model.AddProblemErrors)
+                                {
+                                    <li>@error</li>
+                                }
+                            </ul>
+                        </div>
+                    }
+
+                    <div class="w-56">
+                        <label asp-for="NewProblemDifficulty" class="label">Difficulty for these problems</label>
+                        <select asp-for="NewProblemDifficulty" class="input">
+                            <option value="@Difficulty.Easy">Easy · @Model.Presets.Easy pts</option>
+                            <option value="@Difficulty.Medium">Medium · @Model.Presets.Medium pts</option>
+                            <option value="@Difficulty.Hard">Hard · @Model.Presets.Hard pts</option>
+                        </select>
+                    </div>
+                </div>
+            }
+
+            <div class="divider"></div>
+
+            <div class="flex flex-col gap-3">
+                <label class="flex items-start gap-2.5 text-sm text-muted">
+                    <input asp-for="IsHidden" type="checkbox"
+                           class="mt-0.5 h-4 w-4 rounded border-border bg-surface-2 accent-accent"
+                           data-sheet-field disabled="@disabled" />
+                    <span>
+                        <span class="font-medium text-text">Hidden from members</span>
+                    </span>
+                </label>
+
+                @{
+                    var activeDisabled = activeBlocked || readOnly;
+                }
+                <div>
+                    <label class="flex items-start gap-2.5 text-sm text-muted">
+                        <input asp-for="IsActive" type="checkbox"
+                               class="mt-0.5 h-4 w-4 rounded border-border bg-surface-2 accent-accent"
+                               data-sheet-field
+                               data-stay-disabled="@(activeBlocked ? "true" : null)"
+                               disabled="@(activeDisabled ? "disabled" : null)" />
+                        <span>
+                            <span class="font-medium text-text">Current sheet for this month</span>
+                            <span class="block text-xs leading-relaxed text-muted">
+                                @(isEdit
+                                    ? (activeBlocked
+                                        ? "Add a problem before making this sheet current."
+                                        : "Featured on the dashboard and pinned on the DS page.")
+                                    : "Needs at least one problem; leave it off to save a draft.")
+                            </span>
+                        </span>
+                    </label>
+                    <span asp-validation-for="IsActive" class="field-error"></span>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap justify-end gap-2">
+                @if (isEdit)
+                {
+                    <a asp-controller="DsSheets" asp-action="Index" class="btn btn-ghost"
+                       data-view-back hidden="@(readOnly ? null : "hidden")">Back</a>
+                    <button type="button" class="btn btn-ghost" data-cancel-edit
+                            hidden="@(readOnly ? "hidden" : null)">Cancel</button>
+                }
+                else
+                {
+                    <a asp-controller="DsSheets" asp-action="Index" class="btn btn-ghost">Cancel</a>
+                }
+
+                <button type="submit" class="btn btn-primary" data-save-button
+                        hidden="@(isEdit && readOnly ? "hidden" : null)">
+                    <i class="fa-solid fa-floppy-disk text-xs" aria-hidden="true"></i>
+                    @(isEdit ? "Save sheet" : "Create sheet")
+                </button>
+            </div>
+        </div>
+    </form>
+
+    @if (isEdit && Model.Id is { } sheetId)
+    {
+        <partial name="_ProblemsCard" model="@(new DsProblemsPanelViewModel {
+            SheetId = sheetId,
+            SheetTitle = Model.Title ?? string.Empty,
+            Problems = Model.Problems,
+            NewLinks = Model.NewProblemLinks,
+            NewDifficulty = Model.NewProblemDifficulty,
+            AddErrors = Model.AddProblemErrors,
+            ReadOnly = readOnly,
+            Presets = Model.Presets
+        })" />
+    }
+</div>
+
+@section Scripts {
+    <script src="~/js/sheet-form.js" asp-append-version="true"></script>
+}

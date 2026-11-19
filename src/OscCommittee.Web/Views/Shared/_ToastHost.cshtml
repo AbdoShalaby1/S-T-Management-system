@@ -1,0 +1,28 @@
+@using System.Text.Json
+@{
+    var keys = new (string Key, string Type)[]
+    {
+        ("Toast.Success", "success"),
+        ("Toast.Error", "error"),
+        ("Toast.Warning", "warning"),
+        ("Toast.Info", "info")
+    };
+
+    var messages = new List<Dictionary<string, string>>();
+    foreach (var (key, type) in keys)
+    {
+        if (TempData[key] is string message && !string.IsNullOrWhiteSpace(message))
+        {
+            messages.Add(new Dictionary<string, string> { ["type"] = type, ["message"] = message });
+        }
+    }
+}
+<div id="toast-host"
+     class="pointer-events-none fixed inset-x-0 bottom-0 z-[60] flex flex-col items-center gap-2 p-4 sm:inset-x-auto sm:bottom-auto sm:right-6 sm:top-20 sm:items-end"
+     aria-live="polite"
+     aria-atomic="false"></div>
+
+@if (messages.Count > 0)
+{
+    <script type="application/json" id="toast-payload">@Html.Raw(JsonSerializer.Serialize(messages))</script>
+}

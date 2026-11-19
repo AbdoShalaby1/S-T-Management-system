@@ -1,0 +1,140 @@
+@model DsProblemSolversViewModel
+<div class="flex flex-col gap-6">
+    <div>
+        <nav class="flex flex-wrap items-center gap-2 text-xs text-muted" aria-label="Breadcrumb">
+            <a asp-controller="Board" asp-action="Index" class="hover:text-text">Board</a>
+            <i class="fa-solid fa-chevron-right text-[9px]" aria-hidden="true"></i>
+            <a asp-controller="DsSheets" asp-action="Index" class="hover:text-text">DS sheets</a>
+            <i class="fa-solid fa-chevron-right text-[9px]" aria-hidden="true"></i>
+            <span class="text-text">@Model.Title</span>
+        </nav>
+        <div class="mt-2 flex flex-wrap items-end justify-between gap-3">
+            <div>
+                <p class="card-meta">@Model.PlatformLabel · @Model.SheetTitle</p>
+                <h1 class="mt-1 text-[26px] font-semibold leading-tight tracking-tight">@Model.Title</h1>
+                <p class="mt-1 text-sm text-muted">Who solved this problem, when, and what it credited.</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+                <a href="@Model.ProblemUrl" target="_blank" rel="noopener noreferrer" class="btn">
+                    <i class="fa-solid fa-arrow-up-right-from-square text-[10px]" aria-hidden="true"></i>
+                    Open problem
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <section class="card">
+        <div class="card-header">
+            <h2 class="card-title">Credit a solve manually</h2>
+            <span class="chip">@Model.Points pts</span>
+        </div>
+        <form method="post" asp-controller="DsProblems" asp-action="Credit" asp-route-id="@Model.ProblemId"
+              class="card-body grid gap-4 sm:grid-cols-2">
+            <div>
+                <label for="credit-member" class="label">Member</label>
+                <select id="credit-member" name="memberId" class="input" required>
+                    <option value="">Pick a member…</option>
+                    @foreach (var member in Model.Members)
+                    {
+                        <option value="@member.Id">@member.Label</option>
+                    }
+                </select>
+            </div>
+
+            <div>
+                <label for="credit-solved-at" class="label">Solved at</label>
+                <input id="credit-solved-at" name="solvedAtLocal" type="datetime-local"
+                       class="input" value="@Model.DefaultSolvedAtLocal" required />
+            </div>
+
+            <div>
+                <label for="credit-language" class="label">Language</label>
+                <input id="credit-language" name="language" class="input" maxlength="64"
+                       placeholder="e.g. C++23" />
+            </div>
+
+            <div>
+                <label for="credit-reason" class="label">Reason</label>
+                <input id="credit-reason" name="reason" class="input" maxlength="400"
+                       placeholder="Outside the public history window" />
+            </div>
+
+            <div class="sm:col-span-2 flex flex-wrap items-center justify-between gap-3 border-t border-border/60 pt-3">
+                <p class="hint m-0">
+                    Use this only for accepted work the platforms no longer show. The solve is flagged
+                    as manual and appears in the month it happened. Late solves stay worth 0.
+                </p>
+                <button type="submit" class="btn btn-primary shrink-0">
+                    <i class="fa-solid fa-plus text-[10px]" aria-hidden="true"></i>
+                    Credit solve
+                </button>
+            </div>
+        </form>
+    </section>
+
+    <section class="card overflow-hidden">
+        <div class="card-header">
+            <h2 class="card-title">Solvers</h2>
+            <span class="chip">@Model.Solvers.Count · @Model.Points pts each</span>
+        </div>
+
+        @if (Model.Solvers.Count == 0)
+        {
+            <div class="card-body">
+                <partial name="_EmptyState" model="@(new EmptyStateModel {
+                    Icon = "fa-solid fa-users",
+                    Title = "Nobody has solved it yet",
+                    Description = "Solves appear here after a member syncs their handle, or when you credit them above."
+                })" />
+            </div>
+        }
+        else
+        {
+            <div class="overflow-x-auto">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Member</th>
+                            <th scope="col">Solved</th>
+                            <th scope="col">Language</th>
+                            <th scope="col" class="text-right">Points</th>
+                            <th scope="col" class="text-right">Submission</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var solver in Model.Solvers)
+                        {
+                            <tr>
+                                <td class="text-sm font-medium text-text">
+                                    @solver.MemberName
+                                    @if (solver.IsManual)
+                                    {
+                                        <span class="badge badge-pending ml-1">Manual</span>
+                                    }
+                                </td>
+                                <td class="nums text-xs text-muted">
+                                    @solver.SolvedLabel
+                                    @if (solver.IsLate)
+                                    {
+                                        <span class="badge badge-late ml-1">Late</span>
+                                    }
+                                </td>
+                                <td class="text-xs text-muted">@solver.LanguageLabel</td>
+                                <td class="nums text-right text-sm @(solver.Points == 0 ? "text-muted" : "text-text")">
+                                    @solver.Points
+                                </td>
+                                <td class="text-right">
+                                    <a href="@solver.PlatformUrl" target="_blank" rel="noopener noreferrer"
+                                       class="btn btn-sm" title="Open the submission">
+                                        <i class="fa-solid fa-arrow-up-right-from-square text-[10px]" aria-hidden="true"></i>
+                                        <span class="sr-only">Open @solver.MemberName's submission on @Model.PlatformLabel</span>
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+</div>

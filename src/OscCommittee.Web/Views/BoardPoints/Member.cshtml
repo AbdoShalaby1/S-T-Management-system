@@ -1,0 +1,207 @@
+@model MemberPointsViewModel
+@inject OscCommittee.Web.Services.Common.ITimeZoneService TimeZone
+<div class="flex flex-col gap-6">
+    <div>
+        <nav class="flex flex-wrap items-center gap-2 text-xs text-muted" aria-label="Breadcrumb">
+            <a asp-controller="Board" asp-action="Index" class="hover:text-text">Board</a>
+            <i class="fa-solid fa-chevron-right text-[9px]" aria-hidden="true"></i>
+            <a asp-action="Index" class="hover:text-text">Points</a>
+            <i class="fa-solid fa-chevron-right text-[9px]" aria-hidden="true"></i>
+            <span class="text-text">@Model.DisplayName</span>
+        </nav>
+
+        <div class="mt-2 flex flex-wrap items-end justify-between gap-3">
+            <div class="flex items-start gap-3">
+                <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent-soft text-sm font-semibold uppercase text-accent"
+                      aria-hidden="true">@Model.Initials</span>
+                <div>
+                    <h1 class="text-[26px] font-semibold leading-tight tracking-tight">@Model.DisplayName</h1>
+                    <p class="mt-0.5 text-sm text-muted">@Model.Email</p>
+                    <div class="mt-2 flex flex-wrap items-center gap-1.5">
+                        <span class="badge @Model.StatusBadgeClass">@Model.StatusLabel</span>
+                        <span class="chip">@Model.CurrentMonthLabel</span>
+                    </div>
+                </div>
+            </div>
+
+            <a asp-action="Index" class="btn btn-ghost">
+                <i class="fa-solid fa-arrow-left text-[10px]" aria-hidden="true"></i>
+                All points
+            </a>
+        </div>
+    </div>
+
+    <section class="grid gap-4 sm:grid-cols-4">
+        <article class="stat-tile">
+            <p class="stat-label">@Model.CurrentMonthLabel</p>
+            <p class="stat-value">@Model.CurrentMonthPoints</p>
+        </article>
+        <article class="stat-tile">
+            <p class="stat-label">All time</p>
+            <p class="stat-value">@Model.AllTimePoints</p>
+        </article>
+        <article class="stat-tile">
+            <p class="stat-label">Problems</p>
+            <p class="stat-value">@Model.ProblemCount</p>
+        </article>
+        <article class="stat-tile">
+            <p class="stat-label">C# tasks</p>
+            <p class="stat-value">@Model.TaskCount</p>
+        </article>
+    </section>
+
+    <section class="card" id="add">
+        <div class="card-header">
+            <h2 class="card-title">Add points</h2>
+            <span class="text-xs text-muted">Bonus</span>
+        </div>
+        <div class="card-body">
+            <form method="post" asp-action="AddBonus" asp-route-id="@Model.Id" class="flex flex-col gap-4">
+                @if (!ViewData.ModelState.IsValid)
+                {
+                    <div asp-validation-summary="All"
+                         class="rounded-input border border-danger/30 bg-danger/10 px-3 py-2 text-[13px] leading-relaxed text-danger"></div>
+                }
+
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <div>
+                        <label for="Amount" class="label">Points</label>
+                        <input id="Amount" name="Amount" type="number" min="-999" max="999" step="1"
+                               value="@(Model.Bonus.Amount == 0 ? string.Empty : Model.Bonus.Amount.ToString())"
+                               class="input nums w-32 text-center text-lg font-semibold"
+                               inputmode="numeric" required />
+                    </div>
+
+                    <div>
+                        <label for="MonthSheetId" class="label">Month</label>
+                        <select id="MonthSheetId" name="MonthSheetId" class="input" required>
+                            @foreach (var month in Model.MonthOptions)
+                            {
+                                <option value="@month.Id" selected="@(Model.Bonus.MonthSheetId == month.Id)">
+                                    @month.Label@(month.IsCurrent ? " (current)" : " (previous)")@(month.Status == MonthStatus.Closed ? " · closed" : string.Empty)
+                                </option>
+                            }
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="Reason" class="label">
+                        Reason <span class="font-normal text-muted">(optional)</span>
+                    </label>
+                    <textarea id="Reason" name="Reason" rows="2" maxlength="400"
+                              class="input h-auto py-2 text-[13px]"
+                              placeholder="Why this bonus was given.">@Model.Bonus.Reason</textarea>
+                    <p class="hint">Bonuses can target the current or previous month.</p>
+                </div>
+
+                <div class="flex justify-end">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fa-solid fa-plus text-[10px]" aria-hidden="true"></i>
+                        Add points
+                    </button>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    @if (Model.Months.Count == 0)
+    {
+        <section class="card">
+            <div class="card-body">
+                <partial name="_EmptyState" model="@(new EmptyStateModel {
+                    Icon = "fa-solid fa-coins",
+                    Title = "No points yet",
+                    Description = "Problems, graded C# tasks and bonuses will appear here month by month.",
+                    ActionLabel = "Add points",
+                    ActionHref = "#add"
+                })" />
+            </div>
+        </section>
+    }
+    else
+    {
+        @foreach (var month in Model.Months)
+        {
+            <section class="card overflow-hidden">
+                <div class="card-header">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <h2 class="card-title">@month.Label</h2>
+                        <span class="badge @(month.Status == MonthStatus.Open ? "badge-active" : "badge-hidden")">
+                            @(month.Status == MonthStatus.Open ? "Open" : "Closed")
+                        </span>
+                    </div>
+                    <span class="nums text-sm font-semibold text-text">@month.Total pts</span>
+                </div>
+
+                <div class="flex flex-wrap gap-2 border-b border-border/60 px-4 py-2.5 text-xs text-muted">
+                    <span>Problems <span class="nums text-text">@month.DsPoints</span></span>
+                    <span class="text-muted/40">·</span>
+                    <span>C# tasks <span class="nums text-text">@month.TaskPoints</span></span>
+                    <span class="text-muted/40">·</span>
+                    <span>Bonuses <span class="nums text-text">@month.BonusPoints</span></span>
+                    @if (month.AdjustmentPoints != 0)
+                    {
+                        <span class="text-muted/40">·</span>
+                        <span>Adjustments <span class="nums text-text">@month.AdjustmentPoints</span></span>
+                    }
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th scope="col">Type</th>
+                                <th scope="col">Detail</th>
+                                <th scope="col" class="text-right">Points</th>
+                                <th scope="col">When</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var entry in month.Entries)
+                            {
+                                <tr>
+                                    <td>
+                                        <span class="badge @PointCategoryView.BadgeClass(entry.Category)">
+                                            @PointCategoryView.Label(entry.Category)
+                                        </span>
+                                    </td>
+                                    <td class="text-sm text-text">
+                                        <p>
+                                            @if (!string.IsNullOrWhiteSpace(entry.SourceLabel))
+                                            {
+                                                @entry.SourceLabel
+                                            }
+                                            else
+                                            {
+                                                @(entry.Category == PointCategory.Bonus ? "Bonus" : "Manual correction")
+                                            }
+                                        </p>
+                                        @if (entry.Category == PointCategory.DsSolve && !string.IsNullOrWhiteSpace(entry.SourceDetail))
+                                        {
+                                            <p class="mt-0.5 text-xs text-muted">Sheet · @entry.SourceDetail</p>
+                                        }
+                                        @if (!string.IsNullOrWhiteSpace(entry.Reason))
+                                        {
+                                            <p class="mt-0.5 text-xs text-muted">@entry.Reason</p>
+                                        }
+                                    </td>
+                                    <td class="nums text-right text-sm @(entry.FinalPoints < 0 ? "text-danger" : "text-text")">
+                                        @entry.FinalPoints.ToString("+#;-#;0")
+                                    </td>
+                                    <td class="whitespace-nowrap text-xs text-muted">
+                                        @TimeZone.FormatLocal(entry.CreatedAtUtc, "d MMM yyyy")
+                                        @if (!string.IsNullOrWhiteSpace(entry.ActorName))
+                                        {
+                                            <span class="block text-[10px] text-muted/60">by @entry.ActorName</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        }
+    }
+</div>

@@ -1,0 +1,156 @@
+@model DsSheetPageViewModel
+<div class="flex flex-col gap-6">
+    <div>
+        <nav class="flex flex-wrap items-center gap-2 text-xs text-muted" aria-label="Breadcrumb">
+            <a asp-controller="Ds" asp-action="Index" class="hover:text-text">Data structures</a>
+            <i class="fa-solid fa-chevron-right text-[9px]" aria-hidden="true"></i>
+            <span class="text-text">@Model.Title</span>
+        </nav>
+
+        <div class="mt-3 flex flex-wrap items-start justify-between gap-4">
+            <div class="min-w-0">
+                <p class="card-meta">@Model.MonthLabel</p>
+                <h1 class="mt-1 text-[26px] font-semibold leading-tight tracking-tight">@Model.Title</h1>
+                <div class="mt-2 flex flex-wrap items-center gap-1.5">
+                    @if (Model.IsActive)
+                    {
+                        <span class="badge badge-active">Current</span>
+                    }
+                    @if (Model.IsOverdue)
+                    {
+                        <span class="badge badge-late">Deadline passed</span>
+                    }
+                </div>
+            </div>
+
+            <div class="flex flex-col items-end gap-3">
+                @if (Model.Sync is { } sync)
+                {
+                    <partial name="_SyncButton" model="sync" />
+                }
+                <div class="rounded-card border border-border bg-surface px-4 py-3 text-right">
+                    <p class="stat-label">Deadline</p>
+                    <p class="mt-1 text-sm font-medium text-text nums">@Model.DueLabel</p>
+                    <p class="mt-1 text-xs @(Model.IsOverdue ? "text-danger" : "text-muted")" data-countdown-to="@Model.DueIso">
+                        @(Model.IsOverdue ? "Overdue" : "Counting down...")
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (Model.HasDescription)
+    {
+        <article class="card">
+            <div class="card-header">
+                <h2 class="card-title">About this sheet</h2>
+            </div>
+            <div class="card-body">
+                <div class="md-body">@Html.Raw(Model.DescriptionHtml)</div>
+            </div>
+        </article>
+    }
+
+    <section class="card overflow-hidden">
+        <div class="card-header">
+            <h2 class="card-title">Problems</h2>
+            <span class="chip nums">@Model.ProblemCount</span>
+        </div>
+
+        <div class="card-body">
+            @if (Model.Problems.Count == 0)
+            {
+                <partial name="_EmptyState" model="@(new EmptyStateModel {
+                    Icon = "fa-solid fa-list-check",
+                    Title = "No problems on this sheet yet",
+                    Description = "The board adds problems with their platform, difficulty and points. They will appear here, ready to solve."
+                })" />
+            }
+            else
+            {
+                <ul class="flex flex-col divide-y divide-border/60">
+                    @foreach (var problem in Model.Problems)
+                    {
+                        <li class="flex flex-wrap items-center gap-3 py-3 first:pt-0 last:pb-0">
+                            <span class="badge @problem.PlatformBadgeClass shrink-0">@problem.PlatformLabel</span>
+
+                            <div class="min-w-0 flex-1">
+                                <a href="@problem.Url" target="_blank" rel="noopener noreferrer"
+                                   class="text-sm font-medium text-text hover:text-accent">@problem.Title</a>
+                                <div class="mt-1 flex flex-wrap items-center gap-1.5">
+                                    <span class="badge @problem.DifficultyBadgeClass">@problem.DifficultyLabel</span>
+                                    <span class="nums text-xs text-muted">@problem.Points pts</span>
+                                    @if (problem.Rating is { } rating)
+                                    {
+                                        <span class="text-xs text-muted nums">· rating @rating</span>
+                                    }
+                                    @if (problem.IsPaidOnly)
+                                    {
+                                        <span class="badge badge-hard">Premium</span>
+                                    }
+                                </div>
+                            </div>
+
+                            <div class="flex shrink-0 flex-col items-end gap-1">
+                                @if (problem.IsSolved)
+                                {
+                                    <span class="badge @(problem.IsLate ? "badge-late" : "badge-easy")">
+                                        <i class="fa-solid fa-check text-[9px]" aria-hidden="true"></i>
+                                        @if (problem.IsLate)
+                                        {
+                                            <text>Late · 0 pts</text>
+                                        }
+                                        else
+                                        {
+                                            <text>+@problem.AwardedPoints pts</text>
+                                        }
+                                    </span>
+                                    <span class="nums text-[11px] text-muted">@problem.SolvedLabel</span>
+                                    <span class="flex items-center gap-1.5 text-[11px] text-muted">
+                                        @if (!string.IsNullOrWhiteSpace(problem.Language))
+                                        {
+                                            <span>@problem.Language</span>
+                                        }
+                                        @if (problem.IsManual)
+                                        {
+                                            <span>· manual</span>
+                                        }
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="text-[11px] text-muted">Not synced</span>
+                                }
+
+                                <span class="flex items-center gap-1.5">
+                                    @if (problem.SubmissionUrl is { } submissionUrl)
+                                    {
+                                        <a href="@submissionUrl" target="_blank" rel="noopener noreferrer"
+                                           class="btn btn-sm" title="Open the matched submission">
+                                            <i class="fa-solid fa-clock-rotate-left text-[10px]" aria-hidden="true"></i>
+                                            <span class="sr-only">Matched submission for @problem.Title</span>
+                                        </a>
+                                    }
+                                    <a href="@problem.Url" target="_blank" rel="noopener noreferrer"
+                                       class="btn btn-sm" title="Open on @problem.PlatformLabel">
+                                        <i class="fa-solid fa-arrow-up-right-from-square text-[10px]" aria-hidden="true"></i>
+                                        <span class="sr-only">Open @problem.Title on @problem.PlatformLabel</span>
+                                    </a>
+                                </span>
+                            </div>
+                        </li>
+                    }
+                </ul>
+
+                <p class="mt-4 border-t border-border/60 pt-3 text-xs leading-relaxed text-muted">
+                    Solve any problem on its platform, then press Sync solves.
+                </p>
+            }
+        </div>
+    </section>
+</div>
+
+@section Scripts {
+    <script src="~/js/countdown.js" asp-append-version="true"></script>
+    <script src="~/js/ds-sync.js" asp-append-version="true"></script>
+}

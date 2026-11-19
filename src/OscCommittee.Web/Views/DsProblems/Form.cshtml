@@ -1,0 +1,142 @@
+@model DsProblemFormViewModel
+@{
+    var showDetails = Model.HasMetadata;
+    var disabled = showDetails ? null : "disabled";
+}
+<div class="flex flex-col gap-6">
+    <div>
+        <nav class="flex flex-wrap items-center gap-2 text-xs text-muted" aria-label="Breadcrumb">
+            <a asp-controller="Board" asp-action="Index" class="hover:text-text">Board</a>
+            <i class="fa-solid fa-chevron-right text-[9px]" aria-hidden="true"></i>
+            <a asp-controller="DsSheets" asp-action="Index" class="hover:text-text">DS sheets</a>
+            <i class="fa-solid fa-chevron-right text-[9px]" aria-hidden="true"></i>
+            <span class="text-text">Add problem</span>
+        </nav>
+        <h1 class="mt-2 text-[26px] font-semibold leading-tight tracking-tight">Add a problem</h1>
+    </div>
+
+    <form method="post"
+          asp-controller="DsProblems"
+          asp-action="Create"
+          class="card"
+          data-problem-form
+          data-preview-url="@Url.Action("Preview", "DsProblems")"
+          data-preset-easy="@Model.Presets.Easy"
+          data-preset-medium="@Model.Presets.Medium"
+          data-preset-hard="@Model.Presets.Hard">
+        <div class="card-body flex flex-col gap-5">
+            @if (!ViewData.ModelState.IsValid)
+            {
+                <div asp-validation-summary="ModelOnly"
+                     class="rounded-input border border-danger/30 bg-danger/10 px-3 py-2 text-[13px] leading-relaxed text-danger"></div>
+            }
+
+            <div>
+                <label asp-for="Url" class="label"></label>
+                <div class="flex flex-col gap-2 sm:flex-row">
+                    <input asp-for="Url" class="input font-mono text-[13px]"
+                           placeholder="https://leetcode.com/problems/two-sum/ or https://codeforces.com/problemset/problem/4/A"
+                           data-problem-url />
+                    <button type="submit" name="command" value="import" class="btn btn-primary shrink-0"
+                            formnovalidate data-import-button hidden="@(showDetails ? "hidden" : null)">
+                        <i class="fa-solid fa-cloud-arrow-down text-xs" aria-hidden="true"></i>
+                        Fetch details
+                    </button>
+                </div>
+                <span asp-validation-for="Url" class="field-error"></span>
+                <p class="hint" data-import-status aria-live="polite">
+                    LeetCode problems, or a Codeforces problemset/contest link. The server reads the
+                    title and rating; you always pick the difficulty.
+                </p>
+            </div>
+
+            <div class="flex flex-col gap-5" data-details hidden="@(showDetails ? null : "hidden")">
+                <input type="hidden" asp-for="Platform" disabled="@disabled" />
+                <input type="hidden" asp-for="ExternalId" disabled="@disabled" />
+                <input type="hidden" asp-for="Rating" disabled="@disabled" />
+                <input type="hidden" asp-for="IsPaidOnly" disabled="@disabled" />
+
+                <div class="flex flex-wrap items-center gap-2 rounded-input border border-border bg-surface-2 px-3 py-2">
+                    <span class="badge badge-hidden" data-platform-badge>@(Model.Platform?.ToString() ?? "Platform")</span>
+                    <span class="font-mono text-xs text-muted" data-external-id>@Model.ExternalId</span>
+                    <span class="text-xs text-muted" data-reference hidden="@(string.IsNullOrWhiteSpace(Model.Reference) ? "hidden" : null)">
+                        @Model.Reference
+                    </span>
+                    <span class="chip nums" data-rating-chip hidden="@(Model.Rating is null ? "hidden" : null)">
+                        rating @Model.Rating
+                    </span>
+                    <span class="badge badge-hard" data-paid-chip hidden="@(Model.IsPaidOnly ? null : "hidden")">Premium only</span>
+                </div>
+
+                <p class="rounded-input border border-warning/30 bg-warning/10 px-3 py-2 text-[13px] leading-relaxed text-warning"
+                   data-paid-warning hidden="@(Model.IsPaidOnly ? null : "hidden")">
+                    LeetCode marks this problem as premium. Members without a subscription can read the
+                    statement but cannot submit; the problem can still count for the sheet.
+                </p>
+
+                <p class="rounded-input border border-warning/30 bg-warning/10 px-3 py-2 text-[13px] leading-relaxed text-warning"
+                   data-import-warning hidden="@(string.IsNullOrWhiteSpace(Model.Warning) ? "hidden" : null)">
+                    @Model.Warning
+                </p>
+
+                <div>
+                    <label asp-for="Title" class="label"></label>
+                    <input asp-for="Title" class="input" placeholder="Two Sum" disabled="@disabled" />
+                    <span asp-validation-for="Title" class="field-error"></span>
+                </div>
+
+                <div class="grid gap-4 sm:grid-cols-3">
+                    <div>
+                        <label asp-for="Difficulty" class="label"></label>
+                        <select asp-for="Difficulty" class="input" data-difficulty disabled="@disabled">
+                            <option value="@Difficulty.Easy">Easy · @Model.Presets.Easy pts</option>
+                            <option value="@Difficulty.Medium">Medium · @Model.Presets.Medium pts</option>
+                            <option value="@Difficulty.Hard">Hard · @Model.Presets.Hard pts</option>
+                        </select>
+                        <span asp-validation-for="Difficulty" class="field-error"></span>
+                    </div>
+
+                    <div>
+                        <label asp-for="DsSheetId" class="label"></label>
+                        <select asp-for="DsSheetId" class="input" disabled="@disabled">
+                            <option value="">Pick a sheet...</option>
+                            @foreach (var sheet in Model.Sheets)
+                            {
+                                <option value="@sheet.Id">@sheet.Label</option>
+                            }
+                        </select>
+                        <span asp-validation-for="DsSheetId" class="field-error"></span>
+                    </div>
+
+                    <div>
+                        <label asp-for="PointsOverride" class="label"></label>
+                        <input asp-for="PointsOverride" type="number" min="0" max="999" step="1" class="input"
+                               placeholder="Preset" data-points-override disabled="@disabled" />
+                        <span asp-validation-for="PointsOverride" class="field-error"></span>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap items-center justify-between gap-2 rounded-input border border-border bg-surface-2 px-3 py-2">
+                    <span class="text-xs text-muted">This problem is worth</span>
+                    <span class="text-sm font-semibold text-text">
+                        <span class="nums" data-points-preview>@(Model.PointsOverride ?? Model.Presets.For(Model.Difficulty))</span>
+                        points
+                    </span>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap justify-end gap-2">
+                <a href="@(Model.ReturnUrl ?? Url.Action("Index", "DsSheets"))" class="btn btn-ghost">Cancel</a>
+                <button type="submit" name="command" value="save" class="btn btn-primary"
+                        disabled="@(showDetails ? null : "disabled")">
+                    <i class="fa-solid fa-floppy-disk text-xs" aria-hidden="true"></i>
+                    Add problem
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script src="~/js/problem-import.js" asp-append-version="true"></script>
+}

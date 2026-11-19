@@ -1,0 +1,204 @@
+@model TaskPageViewModel
+<div class="flex flex-col gap-6">
+    <div>
+        <nav class="flex flex-wrap items-center gap-2 text-xs text-muted" aria-label="Breadcrumb">
+            <a asp-controller="Tasks" asp-action="Index" class="hover:text-text">C# tasks</a>
+            <i class="fa-solid fa-chevron-right text-[9px]" aria-hidden="true"></i>
+            <span class="text-text">@Model.Title</span>
+        </nav>
+
+        <div class="mt-3 flex flex-wrap items-start justify-between gap-4">
+            <div class="min-w-0">
+                <p class="card-meta">@Model.MonthLabel</p>
+                <h1 class="mt-1 text-[26px] font-semibold leading-tight tracking-tight">@Model.Title</h1>
+                <div class="mt-2 flex flex-wrap items-center gap-1.5">
+                    <span class="badge @Model.StateBadgeClass">@Model.StateLabel</span>
+                    @if (Model.IsActive)
+                    {
+                        <span class="badge badge-active">Current task</span>
+                    }
+                    <span class="chip">
+                        <i class="fa-solid fa-star text-[11px] text-muted" aria-hidden="true"></i>
+                        <span class="nums">@Model.MaxPoints</span> pts max
+                    </span>
+                </div>
+            </div>
+
+            <div class="rounded-card border border-border bg-surface px-4 py-3 text-right">
+                <p class="stat-label">Deadline</p>
+                <p class="mt-1 text-sm font-medium text-text nums">@Model.DueLabel</p>
+                <p class="mt-1 text-xs @(Model.IsOverdue ? "text-danger" : "text-muted")" data-countdown-to="@Model.DueIso">
+                    @(Model.IsOverdue ? "Overdue" : "Counting down...")
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid gap-4 lg:grid-cols-[1.7fr_1fr] lg:items-start">
+        <article class="card min-w-0">
+            <div class="card-header">
+                <h2 class="card-title">Statement</h2>
+                <span class="chip">Markdown</span>
+            </div>
+            <div class="card-body">
+                @if (Model.HasStatement)
+                {
+                    <div class="md-body">@Html.Raw(Model.StatementHtml)</div>
+                }
+                else
+                {
+                    <p class="text-sm text-muted">
+                        The board has not written a statement for this task yet. Check back, or ask a
+                        board member for the brief.
+                    </p>
+                }
+            </div>
+        </article>
+
+        <div class="flex min-w-0 flex-col gap-4">
+            @if (Model.HasStarterZip)
+            {
+                <article class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Starting code</h2>
+                        <span class="chip">@FileBrowserModel.SizeLabel(Model.StarterZipSizeBytes)</span>
+                    </div>
+                    <div class="card-body flex flex-col gap-3">
+                        <p class="text-sm leading-relaxed text-muted">
+                            Download the starter project, build on it, then upload your folder as usual.
+                        </p>
+                        <div class="flex items-center justify-between gap-3 rounded-input border border-border bg-surface-2/60 px-3 py-2.5">
+                            <div class="min-w-0">
+                                <p class="truncate text-sm font-medium text-text">@Model.StarterZipFileName</p>
+                                <p class="mt-0.5 text-[11px] text-muted nums">@FileBrowserModel.SizeLabel(Model.StarterZipSizeBytes)</p>
+                            </div>
+                            <a asp-controller="Tasks" asp-action="DownloadStarter" asp-route-id="@Model.Id"
+                               class="btn btn-sm shrink-0">
+                                <i class="fa-solid fa-download text-[10px]" aria-hidden="true"></i>
+                                Download
+                            </a>
+                        </div>
+                    </div>
+                </article>
+            }
+
+            @if (!User.IsInRole(Roles.Board))
+            {
+                @if (Model.CanSubmit)
+                {
+                    <article class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">@(Model.IsTryAgain ? "Fix and upload again" : "Upload")</h2>
+                            @if (Model.HasAttempts && Model.BestScore is not null)
+                            {
+                                <span class="chip">
+                                    Best <span class="nums">@Model.BestScoreLabel</span> / <span class="nums">@Model.MaxPoints</span>
+                                </span>
+                            }
+                        </div>
+                        <div class="card-body flex flex-col gap-3">
+                            @if (Model.IsTryAgain)
+                            {
+                                <div class="rounded-input border border-warning/30 bg-warning/10 px-3 py-2.5">
+                                    <p class="text-xs font-semibold text-warning">Syntax error — score 0</p>
+                                    <p class="mt-1 text-xs leading-relaxed text-muted">
+                                        @(string.IsNullOrWhiteSpace(Model.Latest?.Summary)
+                                            ? "The code did not compile. Fix the error and upload the folder again."
+                                            : Model.Latest!.Summary)
+                                    </p>
+                                </div>
+                            }
+
+                            <partial name="_UploadPanel" model="Model" />
+                        </div>
+                    </article>
+                }
+                else if (Model.Latest is { } latest)
+                {
+                    <article class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Your submission</h2>
+                            <span class="badge @latest.StatusBadgeClass">@latest.StatusLabel</span>
+                        </div>
+                        <div class="card-body flex flex-col gap-3">
+                            <div class="grid grid-cols-2 gap-3">
+                                <div class="stat-tile">
+                                    <p class="stat-label">Attempt</p>
+                                    <p class="stat-value">#@latest.AttemptNumber</p>
+                                </div>
+                                <div class="stat-tile">
+                                    <p class="stat-label">@(latest.IsDraftScore ? "Draft score" : "Score")</p>
+                                    <p class="stat-value @(latest.IsDraftScore ? "text-muted" : null)"
+                                       title="@(latest.IsDraftScore ? "Draft score — waiting for board review" : "Final score")">
+                                        @latest.ScoreLabel<span class="text-sm font-normal text-muted"> / @Model.MaxPoints</span>
+                                    </p>
+                                </div>
+                            </div>
+
+                            <p class="text-[11px] text-muted">
+                                Submitted <span class="nums">@latest.SubmittedLabel</span>.
+                                @if (latest.IsDraftScore)
+                                {
+                                    <span>Not final and not credited until the board accepts it.</span>
+                                }
+                            </p>
+
+                            <a asp-controller="Tasks" asp-action="Submission" asp-route-id="@latest.Id"
+                               class="btn btn-sm w-full justify-center">
+                                <i class="fa-solid fa-file-lines text-[10px]" aria-hidden="true"></i>
+                                View submission
+                            </a>
+
+                            <p class="text-[11px] leading-relaxed text-muted/70">
+                                Only one submission is allowed per task. Ask the board if you need to replace it.
+                            </p>
+                        </div>
+                    </article>
+                }
+
+                @if (Model.IsPending && Model.LatestAttemptId is { } pendingId)
+                {
+                    @* Refreshes once grading finishes so the draft or the Try again form appears. *@
+                    <div hidden
+                         data-poll
+                         data-poll-url="@Url.Action("SubmissionStatus", "Tasks", new { id = pendingId })"></div>
+                }
+            }
+        </div>
+    </div>
+
+    @if (Model.HasReference && Model.ShowReference && Model.ReferenceFiles is not null)
+    {
+        <partial name="_FileBrowser" model="@(new FileBrowserModel(
+            Model.ReferenceFiles,
+            "Solution",
+            "One possible approach, not the only one.",
+            Url.Action("DownloadReference", "Tasks", new { id = Model.Id }))
+        {
+            FileUrl = path => Url.Action("Detail", "Tasks", new { id = Model.Id, reference = path })!,
+            EmptyTitle = "Solution files missing",
+            EmptyDescription = "The board has to upload the solution again."
+        })" />
+    }
+    else if (Model.HasReference && !Model.ShowReference)
+    {
+        <section class="card">
+            <div class="card-body flex items-center gap-3">
+                <i class="fa-solid fa-lock text-muted" aria-hidden="true"></i>
+                <p class="text-sm text-muted">
+                    The solution for this task opens automatically after the deadline
+                    (<span class="text-text">@Model.DueLabel</span>).
+                </p>
+            </div>
+        </section>
+    }
+</div>
+
+@section Scripts {
+    <script src="~/js/countdown.js" asp-append-version="true"></script>
+    <script src="~/js/upload.js" asp-append-version="true"></script>
+    @if (Model.IsPending)
+    {
+        <script src="~/js/poll.js" asp-append-version="true"></script>
+    }
+}

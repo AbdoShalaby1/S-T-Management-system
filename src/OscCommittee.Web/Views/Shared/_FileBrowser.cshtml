@@ -1,0 +1,47 @@
+@model FileBrowserModel
+@{
+    var files = Model.View.Files;
+}
+@if (Model.Bare)
+{
+    <partial name="_FileBrowserBody" model="Model" />
+}
+else
+{
+    <section class="card min-w-0">
+        <div class="card-header">
+            <div class="min-w-0">
+                <h2 class="card-title">@Model.Heading</h2>
+                @if (!string.IsNullOrWhiteSpace(Model.Hint))
+                {
+                    <p class="mt-0.5 text-xs text-muted">@Model.Hint</p>
+                }
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="chip">@files.Count file@(files.Count == 1 ? string.Empty : "s")</span>
+                @if (!string.IsNullOrWhiteSpace(Model.DownloadUrl))
+                {
+                    <a href="@Model.DownloadUrl" class="btn btn-sm">
+                        <i class="fa-solid fa-download text-[10px]" aria-hidden="true"></i>
+                        @Model.DownloadLabel
+                    </a>
+                }
+            </div>
+        </div>
+
+        @if (files.Count == 0)
+        {
+            <div class="card-body">
+                <partial name="_EmptyState" model="@(new EmptyStateModel {
+                    Icon = "fa-solid fa-folder-open",
+                    Title = Model.EmptyTitle,
+                    Description = Model.FileError ?? Model.EmptyDescription
+                })" />
+            </div>
+        }
+        else
+        {
+            <partial name="_FileBrowserBody" model="Model" />
+        }
+    </section>
+}

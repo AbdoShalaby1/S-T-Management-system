@@ -1,0 +1,58 @@
+@model ContentPageViewModel
+@{
+    var headings = Model.Headings.Where(heading => heading.Level <= 3).ToList();
+}
+<div class="flex flex-col gap-6">
+    <div>
+        <nav class="flex flex-wrap items-center gap-2 text-xs text-muted" aria-label="Breadcrumb">
+            <a asp-controller="Content" asp-action="Index" class="hover:text-text">Topics</a>
+            <i class="fa-solid fa-chevron-right text-[9px]" aria-hidden="true"></i>
+            <span class="text-text">@Model.Title</span>
+        </nav>
+
+        <div class="mt-3 flex flex-wrap items-start justify-between gap-4">
+            <div class="min-w-0">
+                <h1 class="text-[26px] font-semibold leading-tight tracking-tight">@Model.Title</h1>
+                <p class="mt-2 flex items-center gap-1.5 text-xs text-muted">
+                    <i class="fa-regular fa-clock text-[10px]" aria-hidden="true"></i>
+                    Updated <span class="nums">@Model.UpdatedLabel</span>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid gap-4 lg:grid-cols-[1.7fr_1fr] lg:items-start">
+        <article class="card">
+            <div class="card-header">
+                <h2 class="card-title">Topic</h2>
+            </div>
+            <div class="card-body">
+                @if (string.IsNullOrWhiteSpace(Model.BodyHtml))
+                {
+                    <p class="text-sm text-muted">This topic has no body yet.</p>
+                }
+                else
+                {
+                    <div class="md-body">@Html.Raw(Model.BodyHtml)</div>
+                }
+            </div>
+        </article>
+
+        @if (headings.Count > 1)
+        {
+            <div class="md-body">
+                <nav class="toc" aria-label="On this topic">
+                    <p class="toc-title">On this topic</p>
+                    <ol class="list-none pl-0">
+                        @foreach (var heading in headings)
+                        {
+                            <li data-level="@heading.Level" class="@(heading.Level == 3 ? "pl-3" : null)">
+                                <a href="#@heading.Id" class="text-muted transition-colors hover:text-accent">@heading.Text</a>
+                            </li>
+                        }
+                    </ol>
+                </nav>
+            </div>
+        }
+    </div>
+</div>

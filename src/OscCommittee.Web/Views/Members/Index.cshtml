@@ -1,0 +1,204 @@
+@model MembersViewModel
+@{
+    var statuses = new (string? Value, string Label)[]
+    {
+        (null, "Any status"),
+        (nameof(UserStatus.Active), "Active"),
+        (nameof(UserStatus.Pending), "Pending"),
+        (nameof(UserStatus.Rejected), "Rejected"),
+        (nameof(UserStatus.Deactivated), "Deactivated")
+    };
+
+    var sorts = new (string Value, string Label)[]
+    {
+        ("name", "Name"),
+        ("joined", "Newest first"),
+        ("status", "Status"),
+        ("points", "Points this month")
+    };
+}
+<div class="flex flex-col gap-6">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+            <nav class="flex items-center gap-2 text-xs text-muted" aria-label="Breadcrumb">
+                <a asp-controller="Board" asp-action="Index" class="hover:text-text">Board</a>
+                <i class="fa-solid fa-chevron-right text-[9px]" aria-hidden="true"></i>
+                <span class="text-text">Members</span>
+            </nav>
+            <h1 class="mt-2 text-[26px] font-semibold leading-tight tracking-tight">Members</h1>
+            <p class="mt-1 text-sm text-muted">Everyone who has ever registered, with their current state.</p>
+        </div>
+    </div>
+
+    <section class="grid gap-4 sm:grid-cols-4">
+        <article class="stat-tile">
+            <p class="stat-label">Accounts</p>
+            <p class="stat-value">@Model.TotalCount</p>
+        </article>
+        <article class="stat-tile">
+            <p class="stat-label">Active</p>
+            <p class="stat-value">@Model.ActiveCount</p>
+        </article>
+        <article class="stat-tile">
+            <p class="stat-label">Pending</p>
+            <p class="stat-value">@Model.PendingCount</p>
+        </article>
+        <article class="stat-tile">
+            <p class="stat-label">Deactivated</p>
+            <p class="stat-value">@Model.DeactivatedCount</p>
+        </article>
+    </section>
+
+    <form method="get" asp-controller="Members" asp-action="Index"
+          class="card flex flex-wrap items-end gap-3 p-4">
+        <div class="min-w-40 flex-1">
+            <label for="filter-status" class="label">Status</label>
+            <select id="filter-status" name="status" class="input">
+                @foreach (var (value, label) in statuses)
+                {
+                    <option value="@value" selected="@(Model.StatusFilter == value)">@label</option>
+                }
+            </select>
+        </div>
+
+        <div class="min-w-40 flex-1">
+            <label for="filter-sort" class="label">Sort by</label>
+            <select id="filter-sort" name="sort" class="input">
+                @foreach (var (value, label) in sorts)
+                {
+                    <option value="@value" selected="@(Model.Sort == value)">@label</option>
+                }
+            </select>
+        </div>
+
+        <label class="flex min-h-10 items-center gap-2 text-sm text-muted">
+            <input type="checkbox" name="missingHandles" value="true"
+                   class="h-4 w-4 rounded border-border bg-surface-2 accent-accent"
+                   checked="@Model.MissingHandlesOnly" />
+            Missing a handle
+        </label>
+
+        <div class="flex gap-2">
+            <button type="submit" class="btn">Apply</button>
+            <a asp-controller="Members" asp-action="Index" class="btn btn-ghost">Reset</a>
+        </div>
+    </form>
+
+    <section class="card overflow-hidden">
+        @if (Model.Members.Count == 0)
+        {
+            <div class="card-body">
+                <partial name="_EmptyState" model="@(new EmptyStateModel {
+                    Icon = "fa-solid fa-users",
+                    Title = "No accounts match",
+                    Description = "Try a different status or clear the handle filter.",
+                    ActionLabel = "Reset filters",
+                    ActionHref = Url.Action("Index", "Members")
+                })" />
+            </div>
+        }
+        else
+        {
+            <div class="overflow-x-auto">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Member</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Handles</th>
+                            <th scope="col" class="text-right">Points</th>
+                            <th scope="col">Joined</th>
+                            <th scope="col" class="text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var member in Model.Members)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="flex items-center gap-2.5">
+                                        <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-2 text-[10px] font-semibold uppercase text-muted"
+                                              aria-hidden="true">@member.Initials</span>
+                                        <div class="min-w-0">
+                                            <p class="flex items-center gap-1.5 truncate text-sm font-medium text-text">
+                                                <a asp-controller="Members" asp-action="Detail" asp-route-id="@member.Id"
+                                                   class="truncate hover:text-accent">@member.DisplayName</a>
+                                                @if (member.IsBoard)
+                                                {
+                                                    <span class="badge badge-active">Board</span>
+                                                }
+                                                @if (member.IsSelf)
+                                                {
+                                                    <span class="badge badge-hidden">You</span>
+                                                }
+                                            </p>
+                                            <p class="truncate text-xs text-muted">@member.Email</p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge @member.StatusBadgeClass">@member.StatusLabel</span>
+                                </td>
+                                <td class="text-xs text-muted">
+                                    @if (string.IsNullOrWhiteSpace(member.LeetCodeHandle) && string.IsNullOrWhiteSpace(member.CodeforcesHandle))
+                                    {
+                                        <span class="text-muted/70">—</span>
+                                    }
+                                    else
+                                    {
+                                        <div class="flex flex-col gap-0.5">
+                                            <span>LC · @(string.IsNullOrWhiteSpace(member.LeetCodeHandle) ? "—" : member.LeetCodeHandle)</span>
+                                            <span>CF · @(string.IsNullOrWhiteSpace(member.CodeforcesHandle) ? "—" : member.CodeforcesHandle)</span>
+                                        </div>
+                                    }
+                                </td>
+                                <td class="nums text-right text-muted">
+                                    <a asp-controller="Members" asp-action="Detail" asp-route-id="@member.Id"
+                                       class="hover:text-accent">@member.PointsLabel</a>
+                                </td>
+                                <td class="whitespace-nowrap text-xs text-muted">@member.JoinedLabel</td>
+                                <td>
+                                    <div class="flex justify-end">
+                                        @if (member.CanDeactivate)
+                                        {
+                                            <form method="post" asp-controller="Members" asp-action="Deactivate" asp-route-id="@member.Id"
+                                                  data-confirm="@member.DisplayName will not be able to sign in. Their submissions, solves and points are kept, and you can restore the account at any time."
+                                                  data-confirm-title="Deactivate @member.DisplayName?"
+                                                  data-confirm-label="Deactivate">
+                                                <button type="submit" class="btn btn-sm btn-danger">
+                                                    <i class="fa-solid fa-user-slash text-[11px]" aria-hidden="true"></i>
+                                                    Deactivate
+                                                </button>
+                                            </form>
+                                        }
+                                        else if (member.CanRestore)
+                                        {
+                                            <form method="post" asp-controller="Members" asp-action="Restore" asp-route-id="@member.Id"
+                                                  data-confirm="They will be able to sign in again with their existing password."
+                                                  data-confirm-title="Restore @member.DisplayName?"
+                                                  data-confirm-label="Restore"
+                                                  data-confirm-danger="false">
+                                                <button type="submit" class="btn btn-sm">
+                                                    <i class="fa-solid fa-user-check text-[11px]" aria-hidden="true"></i>
+                                                    Restore
+                                                </button>
+                                            </form>
+                                        }
+                                        else if (member.IsSelf)
+                                        {
+                                            <span class="text-xs text-muted/60">This is you</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-xs text-muted/60">—</span>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+</div>

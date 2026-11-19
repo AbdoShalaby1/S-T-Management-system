@@ -1,0 +1,45 @@
+@model PendingViewModel
+@{
+    Layout = "_AuthLayout";
+    ViewData["Title"] = "Waiting for approval";
+}
+<div class="card">
+    <div class="card-body text-center">
+        <span class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-warning/15 text-warning">
+            <i class="fa-regular fa-hourglass-half" aria-hidden="true"></i>
+        </span>
+
+        <h1 class="mt-4 text-xl font-semibold tracking-tight">Waiting for approval</h1>
+        <p class="mt-2 text-sm leading-relaxed text-muted">
+            Thanks, @Model.DisplayName. Your request is with the board. You get access as soon as
+            one of them approves it.
+        </p>
+
+        <dl class="mt-5 flex flex-col gap-2 rounded-input border border-border bg-surface-2 px-4 py-3 text-left text-sm">
+            <div class="flex items-center justify-between gap-3">
+                <dt class="text-muted">Email</dt>
+                <dd class="truncate font-medium text-text">@Model.Email</dd>
+            </div>
+            <div class="flex items-center justify-between gap-3">
+                <dt class="text-muted">Requested on</dt>
+                <dd class="font-medium text-text">@Model.RequestedOnLabel</dd>
+            </div>
+            <div class="flex items-center justify-between gap-3">
+                <dt class="text-muted">Status</dt>
+                <dd><span class="badge badge-late">Pending</span></dd>
+            </div>
+        </dl>
+
+        <p class="mt-4 text-xs leading-relaxed text-muted/80">
+            You can close this tab and come back later. Your account keeps this state until a board
+            member reviews it.
+        </p>
+
+        <form method="post" asp-controller="Account" asp-action="Logout" class="mt-5">
+            <button type="submit" class="btn btn-ghost w-full">
+                <i class="fa-solid fa-arrow-right-from-bracket text-xs" aria-hidden="true"></i>
+                Sign out
+            </button>
+        </form>
+    </div>
+</div>

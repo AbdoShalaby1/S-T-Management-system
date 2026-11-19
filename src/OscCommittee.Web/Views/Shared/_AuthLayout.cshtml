@@ -1,0 +1,43 @@
+@{
+    var sectionTitle = ViewData["Title"] as string;
+    var documentTitle = string.IsNullOrWhiteSpace(sectionTitle) ? "OSC S&T" : $"{sectionTitle} · OSC S&T";
+}
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0A0A0A" />
+    <meta name="color-scheme" content="dark" />
+    <title>@documentTitle</title>
+    <link rel="icon" href="~/img/osc.png" asp-append-version="true" />
+    <link rel="stylesheet" href="~/lib/fontawesome/css/all.min.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body class="min-h-full">
+    <main class="flex min-h-screen flex-col items-center justify-center px-4 py-10">
+        <a href="~/"
+           class="mb-6 flex items-center gap-2.5 rounded-input px-2 py-1"
+           aria-label="OSC Science and Technology home">
+            <img src="~/img/osc.png" asp-append-version="true" alt=""
+                 class="h-9 w-9 shrink-0 rounded-lg object-contain" />
+            <span class="flex flex-col leading-tight">
+                <span class="text-sm font-semibold tracking-tight text-text">Science &amp; Technology</span>
+                <span class="text-[10px] font-medium uppercase tracking-[0.16em] text-muted/70">Committee</span>
+            </span>
+        </a>
+
+        <div class="w-full max-w-md">
+            @RenderBody()
+        </div>
+
+        <p class="mt-8 text-xs text-muted/70">OSC Science &amp; Technology · Built for the committee</p>
+    </main>
+
+    <partial name="_ToastHost" />
+
+    <script src="~/js/toast.js" asp-append-version="true"></script>
+    <script src="~/js/confirm.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

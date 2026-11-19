@@ -1,0 +1,209 @@
+@model SubmissionPageViewModel
+@{
+    // Once the AI draft exists there is nothing left to poll: the page reloads so the draft
+    // appears, then waits for the board without further requests.
+    var isPolling = Model.Status is SubmissionStatus.Uploaded or SubmissionStatus.Grading;
+}
+<div class="flex flex-col gap-6">
+    <div>
+        <nav class="flex flex-wrap items-center gap-2 text-xs text-muted" aria-label="Breadcrumb">
+            <a asp-controller="Tasks" asp-action="Index" class="hover:text-text">C# tasks</a>
+            <i class="fa-solid fa-chevron-right text-[9px]" aria-hidden="true"></i>
+            <a asp-controller="Tasks" asp-action="Detail" asp-route-id="@Model.TaskId" class="hover:text-text">@Model.TaskTitle</a>
+            <i class="fa-solid fa-chevron-right text-[9px]" aria-hidden="true"></i>
+            <span class="text-text">Attempt #@Model.AttemptNumber</span>
+        </nav>
+
+        <div class="mt-3 flex flex-wrap items-start justify-between gap-4">
+            <div>
+                <p class="card-meta">@Model.MonthLabel</p>
+                <h1 class="mt-1 text-[26px] font-semibold leading-tight tracking-tight">
+                    Attempt #@Model.AttemptNumber
+                </h1>
+                <div class="mt-2 flex flex-wrap items-center gap-1.5">
+                    <span class="badge @Model.StatusBadgeClass">@Model.StatusLabel</span>
+                    <span class="chip">
+                        <i class="fa-regular fa-clock text-[11px] text-muted" aria-hidden="true"></i>
+                        @Model.SubmittedLabel
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (Model.IsTryAgain)
+    {
+        <section class="card border-warning/30">
+            <div class="card-header">
+                <h2 class="card-title">Error — try again</h2>
+                <span class="badge badge-late">Try again</span>
+            </div>
+            <div class="card-body flex flex-col gap-4">
+                <div class="grid gap-3 sm:grid-cols-2">
+                    <div class="stat-tile">
+                        <p class="stat-label">Score</p>
+                        <p class="stat-value">0<span class="text-sm font-normal text-muted"> / @Model.MaxPoints</span></p>
+                    </div>
+                    <div class="stat-tile">
+                        <p class="stat-label">Points</p>
+                        <p class="stat-value text-muted">Not credited</p>
+                    </div>
+                </div>
+
+                <p class="text-sm leading-relaxed text-muted">
+                    The code could not be graded because of an error, so it scored 0. This attempt
+                    does not count as your submission — fix the error and upload the folder again.
+                </p>
+
+                <partial name="_FeedbackDetail" model="Model" />
+
+                <div>
+                    <a asp-controller="Tasks" asp-action="Detail" asp-route-id="@Model.TaskId"
+                       class="btn btn-primary">
+                        <i class="fa-solid fa-cloud-arrow-up text-xs" aria-hidden="true"></i>
+                        Upload a corrected folder
+                    </a>
+                </div>
+            </div>
+        </section>
+    }
+    else if (Model.IsPending)
+    {
+        <section class="card border-accent/30"
+                 data-poll
+                 data-poll-url="@(isPolling ? Url.Action("SubmissionStatus", "Tasks", new { id = Model.Id }) : string.Empty)">
+            <div class="card-body flex flex-wrap items-start gap-4">
+                <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-soft/50 text-accent">
+                    @if (Model.IsAwaitingReview)
+                    {
+                        <i class="fa-solid fa-hourglass-half" aria-hidden="true"></i>
+                    }
+                    else
+                    {
+                        <i class="fa-solid fa-spinner animate-spin" aria-hidden="true"></i>
+                    }
+                </span>
+                <div class="min-w-0 flex-1">
+                    <h2 class="text-sm font-semibold text-text" data-poll-title>
+                        @(Model.Status switch
+                        {
+                            SubmissionStatus.Grading => "Grading in progress",
+                            SubmissionStatus.AwaitingReview => "AI review complete — waiting for the board",
+                            _ => "Saved — waiting for the grader"
+                        })
+                    </h2>
+                    <p class="mt-1 max-w-2xl text-sm leading-relaxed text-muted" data-poll-detail>
+                        @if (Model.Status == SubmissionStatus.AwaitingReview)
+                        {
+                            <span>The AI has drafted a review. A board member checks it and confirms your score.</span>
+                        }
+                        else if (Model.GradingConfigured)
+                        {
+                            <span>Your files are stored. This page refreshes when the score arrives.</span>
+                        }
+                        else
+                        {
+                            <span>Your files are stored. Grading is not enabled yet — the board can grade later.</span>
+                        }
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        @if (Model.IsAwaitingReview && Model.HasFeedback)
+        {
+            <section class="card">
+                <div class="card-header">
+                    <h2 class="card-title">AI draft review</h2>
+                    <span class="badge badge-pending">Draft · not final</span>
+                </div>
+                <div class="card-body flex flex-col gap-4">
+                    <div class="flex items-start gap-3 rounded-input border border-border bg-surface-2/40 px-3 py-2.5">
+                        <i class="fa-solid fa-robot mt-0.5 text-[11px] text-muted" aria-hidden="true"></i>
+                        <p class="text-xs leading-relaxed text-muted">
+                            A board member is checking this draft. The score and wording may change before
+                            it is final, and no points are credited yet.
+                        </p>
+                    </div>
+
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        <div class="stat-tile">
+                            <p class="stat-label">Draft score</p>
+                            <p class="stat-value">@Model.DraftScore<span class="text-sm font-normal text-muted"> / @Model.MaxPoints</span></p>
+                        </div>
+                        <div class="stat-tile">
+                            <p class="stat-label">Points</p>
+                            <p class="stat-value text-muted">Not credited yet</p>
+                        </div>
+                    </div>
+
+                    <partial name="_FeedbackDetail" model="Model" />
+                </div>
+            </section>
+        }
+    }
+    else if (Model.IsGraded)
+    {
+        <section class="card">
+            <div class="card-header">
+                <h2 class="card-title">Result</h2>
+            </div>
+            <div class="card-body flex flex-col gap-4">
+                <div class="grid gap-3 sm:grid-cols-3">
+                    <div class="stat-tile">
+                        <p class="stat-label">Score</p>
+                        <p class="stat-value">@Model.ScoreLabel<span class="text-sm font-normal text-muted"> / @Model.MaxPoints</span></p>
+                    </div>
+                    <div class="stat-tile">
+                        <p class="stat-label">Points</p>
+                        <p class="stat-value">@Model.PointsLabel</p>
+                    </div>
+                    <div class="stat-tile">
+                        <p class="stat-label">Late</p>
+                        <p class="stat-value">@(Model.IsLate ? "Yes" : "No")</p>
+                    </div>
+                </div>
+
+                <partial name="_FeedbackDetail" model="Model" />
+
+                @if (Model.Issues.Count == 0
+                     && Model.Strengths.Count == 0
+                     && string.IsNullOrWhiteSpace(Model.Summary)
+                     && string.IsNullOrWhiteSpace(Model.Verdict))
+                {
+                    <p class="text-xs leading-relaxed text-muted/70">
+                        @(Model.HasFeedback
+                            ? "The review was saved without written detail."
+                            : "The score is saved; written feedback was not returned for this attempt.")
+                    </p>
+                }
+            </div>
+        </section>
+    }
+    else
+    {
+        <section class="card border-danger/30">
+            <div class="card-body flex flex-wrap items-start gap-4">
+                <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-danger/15 text-danger">
+                    <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+                </span>
+                <div class="min-w-0 flex-1">
+                    <h2 class="text-sm font-semibold text-text">Grading failed — saved, waiting for the board</h2>
+                    <p class="mt-1 max-w-2xl text-sm leading-relaxed text-muted">
+                        @(Model.ErrorMessage ?? "Your files are safe. The board can retry grading.")
+                    </p>
+                </div>
+                <a asp-controller="Tasks" asp-action="Detail" asp-route-id="@Model.TaskId" class="btn shrink-0">
+                    Back to the task
+                </a>
+            </div>
+        </section>
+    }
+</div>
+
+@section Scripts {
+    @if (Model.IsPending)
+    {
+        <script src="~/js/poll.js" asp-append-version="true"></script>
+    }
+}

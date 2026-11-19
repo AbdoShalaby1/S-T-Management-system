@@ -1,0 +1,60 @@
+@model RegisterViewModel
+@{
+    Layout = "_AuthLayout";
+    ViewData["Title"] = "Request access";
+}
+<div class="card">
+    <div class="card-body">
+        <h1 class="text-xl font-semibold tracking-tight">Request access</h1>
+        <p class="mt-1 text-sm text-muted">
+            Create an account, then a board member approves it before you can use the app.
+        </p>
+
+        <form method="post" asp-controller="Account" asp-action="Register" class="mt-6 flex flex-col gap-4">
+            @if (!ViewData.ModelState.IsValid)
+            {
+                <div asp-validation-summary="ModelOnly"
+                     class="rounded-input border border-danger/30 bg-danger/10 px-3 py-2 text-[13px] leading-relaxed text-danger"></div>
+            }
+
+            <div>
+                <label asp-for="DisplayName" class="label"></label>
+                <input asp-for="DisplayName" class="input" autocomplete="name" autofocus />
+                <span asp-validation-for="DisplayName" class="field-error"></span>
+            </div>
+
+            <div>
+                <label asp-for="Email" class="label"></label>
+                <input asp-for="Email" class="input" autocomplete="email" />
+                <span asp-validation-for="Email" class="field-error"></span>
+            </div>
+
+            <div>
+                <label asp-for="Password" class="label"></label>
+                <input asp-for="Password" class="input" autocomplete="new-password" />
+                <p class="hint">At least 8 characters, including a letter and a number.</p>
+                <span asp-validation-for="Password" class="field-error"></span>
+            </div>
+
+            <div>
+                <label asp-for="ConfirmPassword" class="label"></label>
+                <input asp-for="ConfirmPassword" class="input" autocomplete="new-password" />
+                <span asp-validation-for="ConfirmPassword" class="field-error"></span>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-full">
+                <i class="fa-solid fa-user-plus text-xs" aria-hidden="true"></i>
+                Create account
+            </button>
+        </form>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="flex flex-wrap items-center justify-between gap-2 px-5 py-4 text-sm">
+        <span class="text-muted">Already approved?</span>
+        <a asp-controller="Account" asp-action="Login" class="font-medium text-accent hover:text-accent-hover">
+            Sign in
+        </a>
+    </div>
+</div>

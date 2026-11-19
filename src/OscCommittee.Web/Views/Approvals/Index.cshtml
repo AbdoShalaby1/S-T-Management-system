@@ -1,0 +1,108 @@
+@model ApprovalsViewModel
+<div class="flex flex-col gap-6">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+            <nav class="flex items-center gap-2 text-xs text-muted" aria-label="Breadcrumb">
+                <a asp-controller="Board" asp-action="Index" class="hover:text-text">Board</a>
+                <i class="fa-solid fa-chevron-right text-[9px]" aria-hidden="true"></i>
+                <span class="text-text">Approvals</span>
+            </nav>
+            <h1 class="mt-2 text-[26px] font-semibold leading-tight tracking-tight">Approvals</h1>
+            <p class="mt-1 text-sm text-muted">
+                Every registration waits here. Approving gives immediate access; rejecting keeps the
+                account on file.
+            </p>
+        </div>
+        <span class="chip">
+            <i class="fa-solid fa-user-clock text-[11px] text-muted" aria-hidden="true"></i>
+            <span class="nums">@Model.Items.Count</span> waiting
+        </span>
+    </div>
+
+    @if (Model.Items.Count == 0)
+    {
+        <div class="card">
+            <div class="card-body">
+                <partial name="_EmptyState" model="@(new EmptyStateModel {
+                    Icon = "fa-solid fa-user-check",
+                    Title = "The queue is clear",
+                    Description = "New registrations appear here as soon as somebody asks for access.",
+                    ActionLabel = "Back to board",
+                    ActionHref = Url.Action("Index", "Board")
+                })" />
+            </div>
+        </div>
+    }
+    else
+    {
+        <ul class="flex flex-col gap-4">
+            @foreach (var item in Model.Items)
+            {
+                <li class="card">
+                    <div class="card-body flex flex-col gap-4">
+                        <div class="flex flex-wrap items-start gap-3">
+                            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-xs font-semibold uppercase text-accent"
+                                  aria-hidden="true">@item.Initials</span>
+                            <div class="min-w-0 flex-1">
+                                <p class="truncate text-[15px] font-semibold text-text">@item.DisplayName</p>
+                                <p class="truncate text-sm text-muted">@item.Email</p>
+                            </div>
+                            <span class="chip">
+                                <i class="fa-regular fa-calendar text-[11px] text-muted" aria-hidden="true"></i>
+                                @item.RequestedOnLabel
+                            </span>
+                        </div>
+
+                        @if (item.HasHandles)
+                        {
+                            <div class="flex flex-wrap gap-2">
+                                @if (!string.IsNullOrWhiteSpace(item.LeetCodeHandle))
+                                {
+                                    <span class="chip">
+                                        <i class="fa-solid fa-code text-[11px] text-muted" aria-hidden="true"></i>
+                                        LeetCode · @item.LeetCodeHandle
+                                    </span>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(item.CodeforcesHandle))
+                                {
+                                    <span class="chip">
+                                        <i class="fa-solid fa-code text-[11px] text-muted" aria-hidden="true"></i>
+                                        Codeforces · @item.CodeforcesHandle
+                                    </span>
+                                }
+                            </div>
+                        }
+
+                        <div class="divider"></div>
+
+                        <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                            <form method="post" asp-controller="Approvals" asp-action="Approve" asp-route-id="@item.Id">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fa-solid fa-check text-xs" aria-hidden="true"></i>
+                                    Approve
+                                </button>
+                            </form>
+
+                            <form method="post" asp-controller="Approvals" asp-action="Reject" asp-route-id="@item.Id"
+                                  class="flex flex-1 flex-col gap-2 lg:max-w-md"
+                                  data-confirm="Rejecting is final for this request. The account stays on file, but it will not be able to sign in."
+                                  data-confirm-title="Reject @item.DisplayName?"
+                                  data-confirm-label="Reject request">
+                                <label for="note-@item.Id" class="label mb-0">Private note (optional)</label>
+                                <textarea id="note-@item.Id" name="note" rows="2"
+                                          class="input h-auto min-h-16 resize-y py-2"
+                                          placeholder="Why this was rejected — only the board sees this."></textarea>
+                                <div class="flex justify-end">
+                                    <button type="submit" class="btn btn-danger btn-sm">
+                                        <i class="fa-solid fa-xmark text-[11px]" aria-hidden="true"></i>
+                                        Reject
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </li>
+            }
+        </ul>
+    }
+</div>

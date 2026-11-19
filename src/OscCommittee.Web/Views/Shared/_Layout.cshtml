@@ -1,0 +1,57 @@
+﻿@{
+    var sectionTitle = ViewData["Title"] as string;
+    var documentTitle = string.IsNullOrWhiteSpace(sectionTitle) ? "OSC S&T" : $"{sectionTitle} · OSC S&T";
+}
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0A0A0A" />
+    <meta name="color-scheme" content="dark" />
+    <title>@documentTitle</title>
+    <link rel="icon" href="~/img/osc.png" asp-append-version="true" />
+    <link rel="stylesheet" href="~/lib/fontawesome/css/all.min.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/lib/prism/prism-tomorrow.min.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/lib/prism/plugins/line-numbers.min.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body class="min-h-full">
+    <a href="#main"
+       class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[70] focus:rounded-input focus:bg-elevated focus:px-4 focus:py-2 focus:text-sm">
+        Skip to content
+    </a>
+
+    <div id="nav-scrim" class="sidebar-scrim hidden" aria-hidden="true"></div>
+
+    <partial name="_Sidebar" />
+
+    <div class="flex min-h-screen flex-col lg:pl-[248px]">
+        <partial name="_TopBar" />
+
+        <main id="main" class="mx-auto w-full max-w-[1200px] flex-1 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+            @RenderBody()
+        </main>
+
+        <footer class="mx-auto w-full max-w-[1200px] px-4 pb-6 text-xs text-muted/70 sm:px-6 lg:px-8">
+            OSC Science &amp; Technology · Built for the committee
+        </footer>
+    </div>
+
+    <partial name="_ToastHost" />
+
+    <script src="~/js/toast.js" asp-append-version="true"></script>
+    <script src="~/js/confirm.js" asp-append-version="true"></script>
+    <script src="~/js/code.js" asp-append-version="true"></script>
+    <script src="~/js/nav.js" asp-append-version="true"></script>
+    <script src="~/lib/prism/prism.js" asp-append-version="true"></script>
+    <script src="~/lib/prism/components/prism-csharp.min.js" asp-append-version="true"></script>
+    <script src="~/lib/prism/components/prism-json.min.js" asp-append-version="true"></script>
+    <script src="~/lib/prism/components/prism-markdown.min.js" asp-append-version="true"></script>
+    <script src="~/lib/prism/components/prism-bash.min.js" asp-append-version="true"></script>
+    <script src="~/lib/prism/plugins/line-numbers.min.js" asp-append-version="true"></script>
+    <script src="~/js/prism-setup.js" asp-append-version="true"></script>
+    <script src="~/js/file-browser.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

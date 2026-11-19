@@ -1,0 +1,447 @@
+@model BoardSubmissionReviewViewModel
+@{
+    var canScore = Model.Score is not null;
+    var savedScore = Model.Score ?? Model.AiScore;
+    var hasStoredContent = Model.SelectedContent is not null;
+    var hasReference = Model.HasReference && Model.ReferenceFiles is not null;
+    var hasGradingDetail = Model.Feedback is not null
+        || Model.IsFailed
+        || !Model.GradingConfigured
+        || !string.IsNullOrWhiteSpace(Model.Verdict);
+}
+<div class="flex flex-col gap-5">
+    <div>
+        <nav class="flex flex-wrap items-center gap-2 text-xs text-muted" aria-label="Breadcrumb">
+            <a asp-controller="Board" asp-action="Index" class="hover:text-text">Board</a>
+            <i class="fa-solid fa-chevron-right text-[9px]" aria-hidden="true"></i>
+            <a asp-controller="BoardTasks" asp-action="Index" class="hover:text-text">C# tasks</a>
+            <i class="fa-solid fa-chevron-right text-[9px]" aria-hidden="true"></i>
+            <a asp-controller="BoardTasks" asp-action="Submissions" asp-route-id="@Model.TaskId"
+               class="hover:text-text">@Model.TaskTitle</a>
+            <i class="fa-solid fa-chevron-right text-[9px]" aria-hidden="true"></i>
+            <span class="text-text">Attempt #@Model.AttemptNumber</span>
+        </nav>
+
+        <div class="mt-2 flex flex-wrap items-end justify-between gap-4">
+            <div class="min-w-0">
+                <h1 class="flex flex-wrap items-center gap-x-2 gap-y-1 text-[26px] font-semibold leading-tight tracking-tight">
+                    <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent-soft text-[11px] font-semibold uppercase text-accent"
+                          aria-hidden="true">@Model.MemberInitials</span>
+                    <span>@Model.MemberName</span>
+                </h1>
+                <p class="mt-2 text-xs leading-relaxed text-muted">
+                    <span class="text-text">@Model.TaskTitle</span>
+                    <span aria-hidden="true">·</span> attempt #@Model.AttemptNumber
+                    <span aria-hidden="true">·</span> @Model.MonthLabel
+                    <span aria-hidden="true">·</span> submitted <span class="nums">@Model.SubmittedLabel</span>
+                    <span aria-hidden="true">·</span> @Model.FileCount files · @Model.TotalSizeLabel
+                </p>
+                <div class="mt-2 flex flex-wrap items-center gap-1.5">
+                    <span class="badge @Model.StatusBadgeClass">@Model.StatusLabel</span>
+                    @if (Model.IsLate)
+                    {
+                        <span class="badge badge-late">Late</span>
+                    }
+                    @if (Model.IsManualScore)
+                    {
+                        <span class="badge badge-pending">Board edited</span>
+                    }
+                </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2">
+                <a asp-controller="BoardTasks" asp-action="Submissions" asp-route-id="@Model.TaskId" class="btn btn-sm">
+                    <i class="fa-solid fa-arrow-left text-[10px]" aria-hidden="true"></i>
+                    All attempts
+                </a>
+                <a asp-action="Download" asp-route-id="@Model.Id" class="btn btn-sm">
+                    <i class="fa-solid fa-file-zipper text-[10px]" aria-hidden="true"></i>
+                    Download
+                </a>
+                @if (Model.Status != SubmissionStatus.Grading)
+                {
+                    <form method="post" asp-action="Retry" asp-route-id="@Model.Id"
+                          data-confirm="Queue this attempt for grading again? The existing score and feedback are replaced when grading finishes."
+                          data-confirm-title="Retry grading" data-confirm-label="Queue again"
+                          data-confirm-danger="false">
+                        <button type="submit" class="btn btn-sm">
+                            <i class="fa-solid fa-rotate text-[10px]" aria-hidden="true"></i>
+                            Retry grading
+                        </button>
+                    </form>
+                }
+            </div>
+        </div>
+    </div>
+
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div asp-validation-summary="All"
+             class="rounded-input border border-danger/30 bg-danger/10 px-3 py-2 text-[13px] leading-relaxed text-danger"></div>
+    }
+
+    @if (Model.IsAwaitingReview)
+    {
+        <div class="flex items-start gap-2.5 rounded-input border border-accent/30 bg-accent/10 px-3 py-2.5 text-sm leading-relaxed">
+            <i class="fa-solid fa-wand-magic-sparkles mt-0.5 text-[11px] text-accent" aria-hidden="true"></i>
+            <p class="text-muted">
+                <span class="font-medium text-text">AI draft ready.</span>
+                Check the score and summary, change anything you want, then accept to credit the points.
+            </p>
+        </div>
+    }
+
+    <div class="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div class="flex min-w-0 flex-col gap-4">
+            <details class="accordion card overflow-hidden" open>
+                <summary class="card-header gap-3">
+                    <span class="flex min-w-0 items-center gap-2.5">
+                        <i class="accordion-chevron fa-solid fa-chevron-right text-[10px] text-muted" aria-hidden="true"></i>
+                        <span class="card-title">Task statement</span>
+                    </span>
+                </summary>
+                <div class="card-body border-t border-border/60">
+                    @if (Model.HasStatement)
+                    {
+                        <div class="md-body max-h-[38vh] overflow-auto pr-1">@Html.Raw(Model.StatementHtml)</div>
+                    }
+                    else
+                    {
+                        <p class="text-sm text-muted">This task has no written statement.</p>
+                    }
+                </div>
+            </details>
+
+            <section class="card min-w-0">
+                <div class="card-header">
+                    <h2 class="card-title">Stored files</h2>
+                    <span class="chip shrink-0">
+                        @Model.FileCount kept@(Model.IgnoredFileCount > 0 ? $", {Model.IgnoredFileCount} ignored" : string.Empty)
+                    </span>
+                </div>
+
+                @if (Model.Files.Count == 0)
+                {
+                    <div class="card-body">
+                        <partial name="_EmptyState" model="@(new EmptyStateModel {
+                            Icon = "fa-solid fa-folder-open",
+                            Title = "No files on disk",
+                            Description = Model.FileError ?? "The stored folder is empty, so there is nothing to review."
+                        })" />
+                    </div>
+                }
+                else
+                {
+                    <div class="grid gap-0 md:grid-cols-[220px_minmax(0,1fr)]">
+                        <nav class="max-h-56 overflow-auto border-b border-border/60 p-2 md:max-h-[60vh] md:border-b-0 md:border-r"
+                             aria-label="Submission files">
+                            <ul class="flex flex-col gap-0.5">
+                                @foreach (var item in Model.Files)
+                                {
+                                    var separator = item.Path.LastIndexOf('/');
+                                    var depth = separator < 0 ? 0 : item.Path.Count(character => character == '/');
+                                    var name = separator < 0 ? item.Path : item.Path[(separator + 1)..];
+                                    var folder = separator < 0 ? null : item.Path[..separator];
+                                    var isSelected = string.Equals(item.Path, Model.SelectedPath, StringComparison.Ordinal);
+
+                                    <li>
+                                        <a asp-action="Review" asp-route-id="@Model.Id" asp-route-file="@item.Path"
+                                           class="flex items-center gap-1.5 rounded px-2 py-1.5 text-xs @(isSelected ? "bg-surface-2 text-text font-medium" : "text-muted hover:bg-surface-2/60 hover:text-text")"
+                                           style="@($"padding-left: {0.5 + depth * 0.75:0.##}rem")"
+                                           title="@item.Path">
+                                            <i class="fa-regular fa-file-lines text-[10px] shrink-0" aria-hidden="true"></i>
+                                            <span class="truncate">@name</span>
+                                            <span class="ml-auto shrink-0 font-mono text-[9px] text-muted/60">@Model.FileSizeLabel(item.Bytes)</span>
+                                        </a>
+                                        @if (!string.IsNullOrEmpty(folder) && isSelected)
+                                        {
+                                            <p class="truncate pb-1 pl-6 font-mono text-[9px] text-muted/60">@folder</p>
+                                        }
+                                    </li>
+                                }
+                            </ul>
+                        </nav>
+
+                        <div class="min-w-0 p-3">
+                            @if (!string.IsNullOrWhiteSpace(Model.FileError))
+                            {
+                                <div class="mb-3 rounded-input border border-warning/30 bg-warning/10 px-3 py-2 text-xs leading-relaxed text-warning">
+                                    @Model.FileError
+                                </div>
+                            }
+
+                            @if (hasStoredContent)
+                            {
+                                <partial name="_CodeBlock" model="@(new CodeBlockModel(
+                                    Model.SelectedContent!,
+                                    Model.SelectedPath,
+                                    Model.SelectedLanguage))" />
+                                @if (Model.SelectedTruncated)
+                                {
+                                    <p class="hint mt-2">
+                                        Display truncated at 120 000 characters. Download the files to read the rest.
+                                    </p>
+                                }
+                            }
+                            else
+                            {
+                                <p class="px-1 py-6 text-sm text-muted">Pick a file on the left to read it.</p>
+                            }
+                        </div>
+                    </div>
+                }
+            </section>
+
+            @if (hasReference)
+            {
+                <details class="accordion card overflow-hidden"
+                         open="@(Context.Request.Query.ContainsKey("reference") ? "open" : null)">
+                    <summary class="card-header gap-3">
+                        <span class="flex min-w-0 items-center gap-2.5">
+                            <i class="accordion-chevron fa-solid fa-chevron-right text-[10px] text-muted" aria-hidden="true"></i>
+                            <span class="card-title">Solution</span>
+                            <span class="badge badge-hidden shrink-0">After deadline</span>
+                        </span>
+                        <span class="chip shrink-0">
+                            @Model.ReferenceFiles!.Files.Count file@(Model.ReferenceFiles.Files.Count == 1 ? string.Empty : "s")
+                        </span>
+                    </summary>
+                    <div class="border-t border-border/60">
+                        <partial name="_FileBrowser" model="@(new FileBrowserModel(
+                            Model.ReferenceFiles,
+                            "Solution")
+                        {
+                            Bare = true,
+                            FileUrl = path => Url.Action("Review", "Submissions", new { id = Model.Id, reference = path })!
+                        })" />
+                    </div>
+                </details>
+            }
+        </div>
+
+        <aside class="flex min-w-0 flex-col gap-4">
+            <section class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Board score</h2>
+                    @if (Model.IsAwaitingReview)
+                    {
+                        <span class="chip chip-strong shrink-0">Awaiting acceptance</span>
+                    }
+                </div>
+
+                <form method="post" asp-action="Score" asp-route-id="@Model.Id"
+                      asp-route-file="@Model.SelectedPath" asp-route-reference="@Model.ReferenceFiles?.SelectedPath"
+                      class="card-body flex flex-col gap-4">
+                    <input type="hidden" name="RowVersion" value="@Model.RowVersion" />
+
+                    <div>
+                        <span class="label mb-0">Score</span>
+                        <div class="mt-1.5 flex flex-wrap items-center gap-2" data-score-stepper>
+                            <button type="button" class="btn btn-sm" data-score-down aria-label="Lower the score">
+                                <i class="fa-solid fa-minus text-[10px]" aria-hidden="true"></i>
+                            </button>
+                            <input type="number" name="Score" value="@(savedScore?.ToString() ?? string.Empty)"
+                                   min="1" max="@Model.MaxPoints" step="1" required placeholder="—"
+                                   class="input nums w-20 text-center text-lg font-semibold"
+                                   aria-label="Score from 1 to @Model.MaxPoints" />
+                            <button type="button" class="btn btn-sm" data-score-up aria-label="Raise the score">
+                                <i class="fa-solid fa-plus text-[10px]" aria-hidden="true"></i>
+                            </button>
+                            <span class="text-xs text-muted">of @Model.MaxPoints points</span>
+                        </div>
+                        <p class="hint">
+                            @if (canScore)
+                            {
+                                <text>AI score: <span class="font-medium text-text">@Model.AiScoreLabel</span> · credited now:</text>
+                                <span class="font-medium text-text">@Model.PointsLabel</span>
+                                <text>pts</text>
+                            }
+                            else if (Model.IsAwaitingReview)
+                            {
+                                <text>AI draft: <span class="font-medium text-text">@Model.AiScoreLabel</span> of @Model.MaxPoints. Nothing is credited until you save.</text>
+                            }
+                            else
+                            {
+                                <text>No score yet. Enter the score you want to award before saving.</text>
+                            }
+                        </p>
+                    </div>
+
+                    @if (Model.IsLate)
+                    {
+                        <div class="rounded-input border border-warning/30 bg-warning/10 px-3 py-2 text-xs leading-relaxed text-warning">
+                            <i class="fa-solid fa-clock mr-1" aria-hidden="true"></i>
+                            Late attempt — saving a board score awards the points anyway.
+                        </div>
+                    }
+
+                    <div>
+                        <label for="review-summary" class="label">Review summary</label>
+                        <textarea id="review-summary" name="Summary" rows="5"
+                                  class="input h-auto py-2 text-[13px]"
+                                  placeholder="What the member should take away from this attempt.">@Model.Summary</textarea>
+                        <p class="hint">Shown to the member with the score. Edit the AI wording freely.</p>
+                    </div>
+
+                    <div class="flex justify-end border-t border-border/60 pt-3">
+                        <button type="submit" class="btn btn-primary w-full shrink-0 sm:w-auto">
+                            <i class="fa-solid fa-floppy-disk text-[10px]" aria-hidden="true"></i>
+                            @(Model.IsAwaitingReview ? "Accept & save" : "Save score")
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            @if (hasGradingDetail)
+            {
+                <details class="accordion card overflow-hidden"
+                         open="@(Model.IsAwaitingReview ? "open" : null)">
+                    <summary class="card-header gap-3">
+                        <span class="flex min-w-0 items-center gap-2.5">
+                            <i class="accordion-chevron fa-solid fa-chevron-right text-[10px] text-muted" aria-hidden="true"></i>
+                            <span class="card-title">AI feedback</span>
+                        </span>
+                        <span class="chip shrink-0">@Model.AiScoreLabel / @Model.MaxPoints</span>
+                    </summary>
+                    <div class="card-body flex flex-col gap-3 border-t border-border/60 text-sm">
+                        @if (!Model.GradingConfigured)
+                        {
+                            <p class="leading-relaxed text-muted">
+                                Grading is not configured, so attempts wait for a board score.
+                            </p>
+                        }
+
+                        @if (Model.IsFailed && !string.IsNullOrWhiteSpace(Model.ErrorMessage))
+                        {
+                            <div class="rounded-input border border-danger/30 bg-danger/10 px-3 py-2 text-xs leading-relaxed text-danger">
+                                @Model.ErrorMessage
+                            </div>
+                        }
+
+                        @if (!string.IsNullOrWhiteSpace(Model.Verdict))
+                        {
+                            <p><span class="badge badge-active">@Model.Verdict</span></p>
+                        }
+
+                        @if (Model.Strengths.Count > 0)
+                        {
+                            <div>
+                                <p class="mb-1 text-xs font-medium text-muted">Strengths</p>
+                                <ul class="flex flex-col gap-1 text-xs text-text">
+                                    @foreach (var strength in Model.Strengths)
+                                    {
+                                        <li class="flex gap-1.5">
+                                            <i class="fa-solid fa-check mt-0.5 text-[9px] text-accent" aria-hidden="true"></i>
+                                            <span class="leading-relaxed">@strength</span>
+                                        </li>
+                                    }
+                                </ul>
+                            </div>
+                        }
+
+                        @if (Model.Issues.Count > 0)
+                        {
+                            <div>
+                                <p class="mb-1 text-xs font-medium text-muted">
+                                    Issues <span class="text-muted/60">(@Model.MustFix.Count must-fix)</span>
+                                </p>
+                                <ul class="flex flex-col gap-1.5 text-xs">
+                                    @foreach (var issue in Model.Issues)
+                                    {
+                                        <li class="rounded border border-border/60 px-2 py-1.5">
+                                            <div class="flex flex-wrap items-center gap-1.5">
+                                                <span class="badge @issue.SeverityBadgeClass">
+                                                    @issue.SeverityLabel
+                                                </span>
+                                                @if (!string.IsNullOrWhiteSpace(issue.File))
+                                                {
+                                                    <span class="font-mono text-[10px] text-muted">@issue.File</span>
+                                                }
+                                            </div>
+                                            <p class="mt-1 leading-relaxed text-text">@issue.Message</p>
+                                        </li>
+                                    }
+                                </ul>
+                            </div>
+                        }
+
+                        @if (Model.HasFeedback && Model.Strengths.Count == 0 && Model.Issues.Count == 0)
+                        {
+                            <p class="text-xs text-muted">The stored feedback has no readable detail.</p>
+                        }
+
+                        @if (!Model.HasFeedback && !Model.IsPending)
+                        {
+                            <p class="text-xs text-muted">No feedback is stored for this attempt.</p>
+                        }
+
+                        @if (Model.IsPending && !Model.IsAwaitingReview && Model.Feedback is null)
+                        {
+                            <p class="text-xs text-muted">Grading has not finished yet. Reload the page to see the result.</p>
+                        }
+
+                        <p class="border-t border-border/60 pt-2 text-[11px] leading-relaxed text-muted/70">
+                            @if (!string.IsNullOrWhiteSpace(Model.GradingModel))
+                            {
+                                <span>@Model.GradingModel</span>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(Model.GradedLabel))
+                            {
+                                <span> · graded <span class="nums">@Model.GradedLabel</span></span>
+                            }
+                            <span> · @Model.RetryCount retr@(Model.RetryCount == 1 ? "y" : "ies")</span>
+                            @if (!string.IsNullOrWhiteSpace(Model.PromptHashShort))
+                            {
+                                <span> · prompt v@(Model.PromptVersion ?? 1) · @Model.PromptHashShort</span>
+                            }
+                            @if (Model.InputChars is not null || Model.InputTokens is not null)
+                            {
+                                <span>
+                                     · input
+                                    @if (Model.InputChars is { } chars)
+                                    {
+                                        <span class="nums">@chars</span> <text>chars</text>
+                                    }
+                                    @if (Model.InputTokens is { } tokens)
+                                    {
+                                        <span> · <span class="nums">@tokens</span> tok</span>
+                                    }
+                                </span>
+                            }
+                        </p>
+                    </div>
+                </details>
+            }
+        </aside>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            'use strict';
+
+            document.querySelectorAll('[data-score-stepper]').forEach(function (stepper) {
+                var input = stepper.querySelector('input[name="Score"]');
+                if (!input) return;
+
+                // An empty box means "no score yet", so the first nudge starts at the minimum
+                // instead of quietly awarding a mid-range score the board never chose.
+                function nudge(step) {
+                    var max = parseInt(input.getAttribute('max'), 10) || 5;
+                    var current = parseInt(input.value, 10);
+                    if (isNaN(current)) {
+                        input.value = step > 0 ? 1 : '';
+                        return;
+                    }
+                    input.value = Math.min(max, Math.max(1, current + step));
+                }
+
+                var down = stepper.querySelector('[data-score-down]');
+                var up = stepper.querySelector('[data-score-up]');
+                if (down) down.addEventListener('click', function () { nudge(-1); });
+                if (up) up.addEventListener('click', function () { nudge(1); });
+            });
+        })();
+    </script>
+}

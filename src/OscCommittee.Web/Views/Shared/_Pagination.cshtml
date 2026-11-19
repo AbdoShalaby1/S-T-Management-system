@@ -1,0 +1,45 @@
+@model PaginationModel
+@{
+    if (Model.TotalPages <= 1)
+    {
+        return;
+    }
+
+    var first = Math.Max(1, Model.Page - 2);
+    var last = Math.Min(Model.TotalPages, first + 4);
+    first = Math.Max(1, last - 4);
+
+    string Href(int pageNumber) => string.Format(
+        System.Globalization.CultureInfo.InvariantCulture,
+        Model.HrefTemplate,
+        Math.Clamp(pageNumber, 1, Model.TotalPages));
+}
+<nav class="flex flex-wrap items-center justify-between gap-3 border-t border-border px-1 pt-4" aria-label="Pagination">
+    <p class="text-xs text-muted nums">Page @Model.Page of @Model.TotalPages</p>
+
+    <div class="flex items-center gap-1">
+        <a href="@Href(Model.Page - 1)"
+           class="btn btn-sm @(Model.Page <= 1 ? "pointer-events-none opacity-40" : string.Empty)"
+           aria-disabled="@(Model.Page <= 1 ? "true" : null)"
+           tabindex="@(Model.Page <= 1 ? "-1" : null)">
+            <i class="fa-solid fa-chevron-left text-[10px]" aria-hidden="true"></i>
+            Previous
+        </a>
+
+        @for (var pageNumber = first; pageNumber <= last; pageNumber++)
+        {
+            var isCurrent = pageNumber == Model.Page;
+            <a href="@Href(pageNumber)"
+               class="btn btn-sm h-8 w-8 px-0 nums @(isCurrent ? "border-accent/40 bg-accent-soft text-accent" : string.Empty)"
+               aria-current="@(isCurrent ? "page" : null)">@pageNumber</a>
+        }
+
+        <a href="@Href(Model.Page + 1)"
+           class="btn btn-sm @(Model.Page >= Model.TotalPages ? "pointer-events-none opacity-40" : string.Empty)"
+           aria-disabled="@(Model.Page >= Model.TotalPages ? "true" : null)"
+           tabindex="@(Model.Page >= Model.TotalPages ? "-1" : null)">
+            Next
+            <i class="fa-solid fa-chevron-right text-[10px]" aria-hidden="true"></i>
+        </a>
+    </div>
+</nav>

@@ -1,0 +1,26 @@
+# Build output
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+*.user
+*.suo
+
+# Tooling
+.vs/
+.vscode/
+*.userosscache
+*.sln.docstates
+
+# Runtime data
+src/OscCommittee.Web/App_Data/
+src/OscCommittee.Web/node_modules/
+
+# Local secrets (keep the committed placeholders, not real values)
+src/OscCommittee.Web/appsettings.Local.json
+src/OscCommittee.Web/appsettings.*.local.json
+src/OscCommittee.Web/appsettings.json
+
+# OS noise
+Thumbs.db
+.DS_Store

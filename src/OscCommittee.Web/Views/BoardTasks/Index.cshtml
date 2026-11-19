@@ -1,0 +1,146 @@
+@model CSharpTasksViewModel
+@{
+    var tiles = new[]
+    {
+        ("Tasks", Model.TotalCount.ToString(), "fa-solid fa-code", "Across every month"),
+        ("Current", Model.ActiveCount.ToString(), "fa-solid fa-bolt", "One at most"),
+        ("Hidden", Model.HiddenCount.ToString(), "fa-solid fa-eye-slash", "Drafts members cannot see")
+    };
+}
+<div class="flex flex-col gap-6">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+            <nav class="flex items-center gap-2 text-xs text-muted" aria-label="Breadcrumb">
+                <a asp-controller="Board" asp-action="Index" class="hover:text-text">Board</a>
+                <i class="fa-solid fa-chevron-right text-[9px]" aria-hidden="true"></i>
+                <span class="text-text">C# tasks</span>
+            </nav>
+            <h1 class="mt-2 text-[26px] font-semibold leading-tight tracking-tight">C# tasks</h1>
+        </div>
+        <div class="flex items-center gap-2">
+            <span class="chip">
+                <i class="fa-regular fa-calendar-days text-[11px] text-muted" aria-hidden="true"></i>
+                @Model.CurrentMonthLabel
+            </span>
+            <a asp-controller="BoardTasks" asp-action="New" class="btn btn-primary">
+                <i class="fa-solid fa-plus text-xs" aria-hidden="true"></i>
+                New task
+            </a>
+        </div>
+    </div>
+
+    <section class="grid gap-4 sm:grid-cols-3">
+        @foreach (var (label, value, icon, hint) in tiles)
+        {
+            <article class="stat-tile">
+                <div class="flex items-start justify-between gap-2">
+                    <p class="stat-label">@label</p>
+                    <i class="@icon text-xs text-muted" aria-hidden="true"></i>
+                </div>
+                <p class="stat-value">@value</p>
+                <p class="mt-1 text-xs text-muted">@hint</p>
+            </article>
+        }
+    </section>
+
+    <section class="card overflow-hidden">
+        @if (Model.Tasks.Count == 0)
+        {
+            <div class="card-body">
+                <partial name="_EmptyState" model="@(new EmptyStateModel {
+                    Icon = "fa-solid fa-code",
+                    Title = "No C# tasks yet",
+                    Description = "Create the first task, write its statement, and keep it hidden until the brief is ready.",
+                    ActionLabel = "Create a task",
+                    ActionHref = Url.Action("New", "BoardTasks")
+                })" />
+            </div>
+        }
+        else
+        {
+            <div class="overflow-x-auto">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Task</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Deadline</th>
+                            <th scope="col">Solution</th>
+                            <th scope="col" class="text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var task in Model.Tasks)
+                        {
+                            <tr>
+                                <td>
+                                    <a asp-controller="BoardTasks" asp-action="Detail" asp-route-id="@task.Id"
+                                       class="text-sm font-medium text-text hover:text-accent">@task.Title</a>
+                                    <p class="mt-0.5 text-xs text-muted">@task.MonthLabel</p>
+                                </td>
+                                <td>
+                                    <span class="badge @task.StatusBadgeClass">@task.StatusLabel</span>
+                                </td>
+                                <td class="whitespace-nowrap text-xs text-muted nums">@task.DueLabel</td>
+                                <td class="text-xs text-muted">
+                                    @if (task.HasReference)
+                                    {
+                                        <span class="badge badge-active">@task.ReferenceLabel</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted/70">—</span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="flex flex-wrap items-center justify-end gap-1.5">
+                                        <a asp-controller="BoardTasks" asp-action="Submissions" asp-route-id="@task.Id"
+                                           class="btn btn-sm">
+                                            <i class="fa-solid fa-inbox text-[10px]" aria-hidden="true"></i>
+                                            Attempts
+                                        </a>
+                                        <a asp-controller="BoardTasks" asp-action="Edit" asp-route-id="@task.Id" class="btn btn-sm">
+                                            <i class="fa-solid fa-pen text-[10px]" aria-hidden="true"></i>
+                                            Edit
+                                        </a>
+
+                                        @if (task.CanActivate)
+                                        {
+                                            var activateMessage = task.ActiveTitleInMonth is null
+                                                ? "This task becomes the one featured on the member task list. Members can already see it."
+                                                : $"“{task.ActiveTitleInMonth}” will be set as past first. Only one task per month can be current.";
+
+                                            <form method="post" asp-controller="BoardTasks" asp-action="Activate" asp-route-id="@task.Id"
+                                                  data-confirm="@activateMessage"
+                                                  data-confirm-title="Make @task.Title current?"
+                                                  data-confirm-label="Set as current"
+                                                  data-confirm-danger="false">
+                                                <button type="submit" class="btn btn-sm">
+                                                    <i class="fa-solid fa-bolt text-[10px]" aria-hidden="true"></i>
+                                                    Set as current
+                                                </button>
+                                            </form>
+                                        }
+                                        else if (task.CanDeactivate)
+                                        {
+                                            <form method="post" asp-controller="BoardTasks" asp-action="Deactivate" asp-route-id="@task.Id"
+                                                  data-confirm="Members keep seeing it and can still submit until its deadline. It just stops being current."
+                                                  data-confirm-title="Make @task.Title past?"
+                                                  data-confirm-label="Set as past"
+                                                  data-confirm-danger="false">
+                                                <button type="submit" class="btn btn-sm">
+                                                    <i class="fa-solid fa-circle-pause text-[10px]" aria-hidden="true"></i>
+                                                    Set as past
+                                                </button>
+                                            </form>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+</div>

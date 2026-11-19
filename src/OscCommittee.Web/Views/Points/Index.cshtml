@@ -1,0 +1,19 @@
+@model StandingsDetailViewModel
+@{
+    ViewData["Title"] = "Points";
+}
+<div class="flex flex-col gap-6">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+            <p class="card-meta">Community</p>
+            <h1 class="mt-1 text-[26px] font-semibold leading-tight tracking-tight">Points</h1>
+            <p class="mt-1 text-sm text-muted">Your own ledger, month by month. Only you and the board can see this.</p>
+        </div>
+        <a href="/standings" class="chip">
+            <i class="fa-solid fa-ranking-star text-[11px] text-muted" aria-hidden="true"></i>
+            Standings
+        </a>
+    </div>
+
+    <partial name="~/Views/Standings/_Detail.cshtml" model="Model" />
+</div>

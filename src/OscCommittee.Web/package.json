@@ -1,0 +1,20 @@
+{
+  "name": "osc-committee-web",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Front-end asset pipeline for the OSC Science & Technology committee app.",
+  "scripts": {
+    "build:css": "node ./node_modules/@tailwindcss/cli/dist/index.mjs -i ./Styles/site.css -o ./wwwroot/css/site.css --minify",
+    "watch:css": "node ./node_modules/@tailwindcss/cli/dist/index.mjs -i ./Styles/site.css -o ./wwwroot/css/site.css --watch",
+    "copy:vendor": "node ./Scripts/copy-vendor.mjs",
+    "build": "npm run build:css && npm run copy:vendor"
+  },
+  "devDependencies": {
+    "@fontsource/inter": "^5.2.5",
+    "@fontsource/jetbrains-mono": "^5.2.5",
+    "@fortawesome/fontawesome-free": "^7.0.1",
+    "@tailwindcss/cli": "^4.1.14",
+    "prismjs": "^1.30.0",
+    "tailwindcss": "^4.1.14"
+  }
+}

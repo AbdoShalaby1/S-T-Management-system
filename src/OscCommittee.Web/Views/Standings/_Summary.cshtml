@@ -1,0 +1,231 @@
+@model StandingsSummaryViewModel
+@{
+    var context = Model.Context;
+    var ds = context?.DsSheet;
+    var task = context?.Task;
+    var taskBadge = task is null
+        ? "badge-hidden"
+        : task.Score is not null
+            ? (task.IsLate ? "badge-late" : "badge-graded")
+            : task.Attempts > 0 ? "badge-pending" : "badge-hidden";
+
+    var tab = Model.Tab;
+}
+<div class="flex flex-col gap-4">
+    @if (context is not null)
+    {
+        <section class="grid gap-4 lg:grid-cols-2" aria-label="Current work">
+            <article class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Current DS sheet</h2>
+                    @if (ds is null)
+                    {
+                        <span class="badge badge-hidden">None</span>
+                    }
+                    else
+                    {
+                        <span class="badge badge-active">Current</span>
+                    }
+                </div>
+                @if (ds is { } sheet)
+                {
+                    <div class="card-body flex flex-col gap-3">
+                        <div class="flex flex-wrap items-start justify-between gap-2">
+                            <div>
+                                <p class="text-sm font-semibold text-text">@sheet.Title</p>
+                                <p class="mt-0.5 text-xs text-muted">@sheet.MonthLabel &middot; @sheet.Points pts earned</p>
+                            </div>
+                            <span class="nums text-xs text-muted">@sheet.Solved / @sheet.Total solved</span>
+                        </div>
+                        <div class="h-1.5 overflow-hidden rounded-full bg-surface-2">
+                            <div class="h-full rounded-full bg-accent" style="width: @(sheet.ProgressPercent)%"></div>
+                        </div>
+                        <div class="flex flex-wrap items-center justify-between gap-2 border-t border-border/60 pt-2.5">
+                            <span class="flex items-center gap-1.5 text-xs text-muted">
+                                <i class="fa-regular fa-clock text-[11px]" aria-hidden="true"></i>
+                                <span class="nums text-text" data-countdown-to="@sheet.DueIso">@(sheet.IsOverdue ? "overdue" : "soon")</span>
+                            </span>
+                            <a asp-controller="Ds" asp-action="Sheet" asp-route-id="@sheet.Id"
+                               class="text-xs font-medium text-accent hover:text-accent-hover">
+                                Open sheet
+                                <i class="fa-solid fa-arrow-right text-[9px]" aria-hidden="true"></i>
+                            </a>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="card-body">
+                        <p class="text-sm text-muted">No current DS sheet right now.</p>
+                    </div>
+                }
+            </article>
+
+            <article class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Current C# task</h2>
+                    @if (task is null)
+                    {
+                        <span class="badge badge-hidden">None</span>
+                    }
+                    else
+                    {
+                        <span class="badge @taskBadge">@task.StatusLabel</span>
+                    }
+                </div>
+                @if (task is { } activeTask)
+                {
+                    <div class="card-body flex flex-col gap-3">
+                        <div>
+                            <p class="text-sm font-semibold text-text">@activeTask.Title</p>
+                            <p class="mt-0.5 text-xs text-muted">
+                                @activeTask.Attempts attempt@(activeTask.Attempts == 1 ? "" : "s")
+                                @if (activeTask.Score is { } score)
+                                {
+                                    <span> &middot; best <span class="nums text-text">@score/@activeTask.MaxPoints</span></span>
+                                }
+                                @if (activeTask.IsLate)
+                                {
+                                    <span class="badge badge-late ml-1">Late</span>
+                                }
+                            </p>
+                        </div>
+                        <div class="flex flex-wrap items-center justify-between gap-2 border-t border-border/60 pt-2.5">
+                            <span class="flex items-center gap-1.5 text-xs text-muted">
+                                <i class="fa-regular fa-clock text-[11px]" aria-hidden="true"></i>
+                                <span class="nums text-text" data-countdown-to="@activeTask.DueIso">@(activeTask.IsOverdue ? "overdue" : "soon")</span>
+                            </span>
+                            <a asp-controller="Tasks" asp-action="Detail" asp-route-id="@activeTask.Id"
+                               class="text-xs font-medium text-accent hover:text-accent-hover">
+                                Open task
+                                <i class="fa-solid fa-arrow-right text-[9px]" aria-hidden="true"></i>
+                            </a>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="card-body">
+                        <p class="text-sm text-muted">No current C# task right now.</p>
+                    </div>
+                }
+            </article>
+        </section>
+    }
+
+    <section class="card overflow-hidden" aria-label="Month standings">
+        <div class="card-header">
+            <div>
+                <h2 class="card-title">@Model.MonthLabel</h2>
+                <p class="mt-0.5 text-xs text-muted">
+                    <span class="nums">@Model.ParticipantCount</span>
+                    @(Model.ParticipantCount == 1 ? "member" : "members") ranked
+                </p>
+            </div>
+            <span class="badge badge-active">Open month</span>
+        </div>
+
+        @if (Model.Rows.Count == 0)
+        {
+            <div class="card-body">
+                <partial name="_EmptyState" model="@(new EmptyStateModel {
+                    Icon = "fa-solid fa-ranking-star",
+                    Title = "Nobody is on the board yet",
+                    Description = "Active members appear here as soon as the month starts, even with zero points."
+                })" />
+            </div>
+        }
+        else
+        {
+            <div class="overflow-x-auto">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th scope="col" class="w-14">Rank</th>
+                            <th scope="col">Member</th>
+                            @if (tab == StandingsTab.Ds)
+                            {
+                                <th scope="col" class="text-right">DS points</th>
+                                <th scope="col" class="text-right">Solved</th>
+                            }
+                            else if (tab == StandingsTab.Tasks)
+                            {
+                                <th scope="col" class="text-right">Task points</th>
+                                <th scope="col" class="text-right">Solved</th>
+                            }
+                            else
+                            {
+                                <th scope="col" class="text-right">DS</th>
+                                <th scope="col" class="text-right">Tasks</th>
+                                <th scope="col" class="text-right">Bonus</th>
+                                <th scope="col" class="text-right">Total</th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in Model.Rows)
+                        {
+                            <tr class="@(row.IsCurrentUser ? "bg-accent-soft/20" : null)">
+                                <td>
+                                    <span class="nums text-sm font-semibold @(row.Rank <= 3 ? "text-accent" : "text-muted")">
+                                        #@row.Rank
+                                    </span>
+                                </td>
+                                <td>
+                                    @if (string.IsNullOrEmpty(row.DetailHref))
+                                    {
+                                        <span class="flex items-center gap-2.5 text-text">
+                                            <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-2 text-[10px] font-semibold uppercase text-muted"
+                                                  aria-hidden="true">@row.Initials</span>
+                                            <span class="truncate text-sm font-medium">@row.DisplayName</span>
+                                            @if (row.IsCurrentUser)
+                                            {
+                                                <span class="badge badge-active shrink-0">You</span>
+                                            }
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <a href="@row.DetailHref" class="flex items-center gap-2.5 text-text hover:text-accent">
+                                            <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-2 text-[10px] font-semibold uppercase text-muted"
+                                                  aria-hidden="true">@row.Initials</span>
+                                            <span class="truncate text-sm font-medium">@row.DisplayName</span>
+                                            @if (row.IsCurrentUser)
+                                            {
+                                                <span class="badge badge-active shrink-0">You</span>
+                                            }
+                                        </a>
+                                    }
+                                </td>
+                                @if (tab == StandingsTab.Ds)
+                                {
+                                    <td class="nums text-right text-sm font-semibold text-text">@row.DsPoints</td>
+                                    <td class="nums text-right text-sm text-muted">@row.DsSolved</td>
+                                }
+                                else if (tab == StandingsTab.Tasks)
+                                {
+                                    <td class="nums text-right text-sm font-semibold text-text">@row.TaskPoints</td>
+                                    <td class="nums text-right text-sm text-muted">@row.TasksSolved</td>
+                                }
+                                else
+                                {
+                                    <td class="nums text-right text-sm text-muted">@row.DsPoints</td>
+                                    <td class="nums text-right text-sm text-muted">@row.TaskPoints</td>
+                                    <td class="nums text-right text-sm text-muted">@row.BonusPoints</td>
+                                    <td class="nums text-right text-sm font-semibold text-text">@row.Total</td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @if (Model.Pagination is { } pagination)
+            {
+                <div class="px-4 py-3">
+                    <partial name="_Pagination" model="pagination" />
+                </div>
+            }
+        }
+    </section>
+</div>

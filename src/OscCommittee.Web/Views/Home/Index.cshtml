@@ -1,0 +1,240 @@
+﻿@model DashboardViewModel
+@{
+    ViewData["Title"] = "Dashboard";
+    var task = Model.ActiveTask;
+    var taskBadge = task is null
+        ? "badge-hidden"
+        : task.Score is not null
+            ? (task.IsLate ? "badge-late" : "badge-graded")
+            : task.Attempts > 0 ? "badge-pending" : "badge-hidden";
+}
+<div class="flex flex-col gap-6">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+            <p class="card-meta">@Model.MonthLabel</p>
+            <h1 class="mt-1 text-[26px] font-semibold leading-tight tracking-tight">
+                Welcome back, @Model.DisplayName
+            </h1>
+            <p class="mt-1 text-sm text-muted">Here is where your month stands.</p>
+        </div>
+    </div>
+
+    <section class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Month summary">
+        <div class="stat-tile">
+            <p class="stat-label">Points this month</p>
+            <p class="stat-value">@Model.MonthTotal</p>
+            <p class="mt-1 text-xs text-muted">Across DS, tasks and bonuses</p>
+        </div>
+        <div class="stat-tile">
+            <p class="stat-label">Standing</p>
+            <p class="stat-value">
+                @if (Model.Rank is { } standing)
+                {
+                    <span>#@standing</span>
+                    <span class="text-base font-normal text-muted">of @Model.CohortSize</span>
+                }
+                else
+                {
+                    <span>&mdash;</span>
+                }
+            </p>
+            <p class="mt-1 text-xs text-muted">@(Model.IsBoard ? "Board accounts are not ranked" : "Current month, by total points")</p>
+        </div>
+        <div class="stat-tile">
+            <p class="stat-label">DS solved</p>
+            <p class="stat-value">
+                @if (Model.ActiveDsSheet is { } sheet)
+                {
+                    <span>@sheet.Solved</span>
+                    <span class="text-base font-normal text-muted">/ @sheet.Total</span>
+                }
+                else
+                {
+                    <span>&mdash;</span>
+                }
+            </p>
+            <p class="mt-1 text-xs text-muted">On the current sheet</p>
+        </div>
+        <div class="stat-tile">
+            <p class="stat-label">Task score</p>
+            <p class="stat-value">
+                @if (task?.Score is { } score)
+                {
+                    <span>@score</span>
+                    <span class="text-base font-normal text-muted">/ @task.MaxPoints</span>
+                }
+                else
+                {
+                    <span>&mdash;</span>
+                }
+            </p>
+            <p class="mt-1 text-xs text-muted">@(task?.StatusLabel ?? "No current task")</p>
+        </div>
+    </section>
+
+    <section class="grid gap-4 lg:grid-cols-2" aria-label="Current work">
+        <article class="card">
+            <div class="card-header">
+                <h2 class="card-title">Current C# task</h2>
+                @if (task is null)
+                {
+                    <span class="badge badge-hidden">None</span>
+                }
+                else
+                {
+                    <span class="badge @taskBadge">@task.StatusLabel</span>
+                }
+            </div>
+            @if (task is { } activeTask)
+            {
+                <div class="card-body flex flex-col gap-4">
+                    <div>
+                        <p class="text-lg font-semibold tracking-tight text-text">@activeTask.Title</p>
+                        <p class="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
+                            <i class="fa-regular fa-clock text-xs" aria-hidden="true"></i>
+                            Deadline <span class="nums text-text">@activeTask.DueLabel</span>
+                            <span class="text-xs" data-countdown-to="@activeTask.DueIso">@(activeTask.IsOverdue ? "overdue" : "soon")</span>
+                        </p>
+                    </div>
+
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-t border-border/60 pt-3">
+                        <span class="text-xs text-muted">
+                            @activeTask.Attempts attempt@(activeTask.Attempts == 1 ? "" : "s")
+                            @if (activeTask.Score is { } best)
+                            {
+                                <span> &middot; best <span class="nums text-text">@best/@activeTask.MaxPoints</span></span>
+                            }
+                            @if (activeTask.IsLate)
+                            {
+                                <span class="badge badge-late ml-1">Late</span>
+                            }
+                        </span>
+                        <a asp-controller="Tasks" asp-action="Detail" asp-route-id="@activeTask.Id"
+                           class="btn btn-primary btn-sm">
+                            Open task
+                            <i class="fa-solid fa-arrow-right text-[10px]" aria-hidden="true"></i>
+                        </a>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="card-body">
+                    <partial name="_EmptyState" model="@(new EmptyStateModel {
+                        Icon = "fa-solid fa-code",
+                        Title = "No current task",
+                        Description = "The board publishes one task at a time. It will appear here with its deadline."
+                    })" />
+                </div>
+            }
+        </article>
+
+        <article class="card">
+            <div class="card-header">
+                <h2 class="card-title">Current DS sheet</h2>
+                @if (Model.ActiveDsSheet is null)
+                {
+                    <span class="badge badge-hidden">None</span>
+                }
+                else
+                {
+                    <span class="badge badge-active">Current</span>
+                }
+            </div>
+            @if (Model.ActiveDsSheet is { } ds)
+            {
+                <div class="card-body flex flex-col gap-4">
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <p class="text-lg font-semibold tracking-tight text-text">@ds.Title</p>
+                            <p class="mt-1 text-xs text-muted">@ds.MonthLabel &middot; @ds.Points pts earned</p>
+                        </div>
+                        @if (Model.Sync is { } sync)
+                        {
+                            <partial name="_SyncButton" model="sync" />
+                        }
+                    </div>
+
+                    <div>
+                        <div class="flex items-center justify-between text-xs text-muted">
+                            <span>Progress</span>
+                            <span class="nums text-text">@ds.Solved / @ds.Total solved</span>
+                        </div>
+                        <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-2">
+                            <div class="h-full rounded-full bg-accent" style="width: @(ds.ProgressPercent)%"></div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-t border-border/60 pt-3">
+                        <span class="flex items-center gap-1.5 text-xs text-muted">
+                            <i class="fa-regular fa-clock text-[11px]" aria-hidden="true"></i>
+                            Deadline
+                            <span class="nums text-text" data-countdown-to="@ds.DueIso">@(ds.IsOverdue ? "overdue" : "soon")</span>
+                        </span>
+                        <a asp-controller="Ds" asp-action="Sheet" asp-route-id="@ds.Id"
+                           class="btn btn-primary btn-sm">
+                            Open sheet
+                            <i class="fa-solid fa-arrow-right text-[10px]" aria-hidden="true"></i>
+                        </a>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="card-body">
+                    <partial name="_EmptyState" model="@(new EmptyStateModel {
+                        Icon = "fa-solid fa-layer-group",
+                        Title = "No current sheet",
+                        Description = "Monthly problem sets show up here. Solve on LeetCode or Codeforces, then sync."
+                    })" />
+                </div>
+            }
+        </article>
+    </section>
+
+    <section class="grid gap-4">
+        <article class="card">
+            <div class="card-header">
+                <h2 class="card-title">Needs attention</h2>
+                <span class="chip">
+                    <span class="nums">@Model.Alerts.Count</span>
+                    @(Model.Alerts.Count == 1 ? "item" : "items")
+                </span>
+            </div>
+            @if (Model.Alerts.Count == 0)
+            {
+                <div class="card-body">
+                    <partial name="_EmptyState" model="@(new EmptyStateModel {
+                        Icon = "fa-solid fa-circle-check",
+                        Title = "Nothing needs your attention",
+                        Description = "Missing handles, failed grading and improvable attempts will show up here."
+                    })" />
+                </div>
+            }
+            else
+            {
+                <div class="card-body flex flex-col gap-2.5">
+                    @foreach (var alert in Model.Alerts)
+                    {
+                        <div class="flex flex-wrap items-start gap-3 rounded-input border px-3 py-2.5 @alert.AccentClass">
+                            <i class="@alert.Icon mt-0.5 text-sm" aria-hidden="true"></i>
+                            <div class="min-w-0 flex-1">
+                                <p class="text-sm font-medium">@alert.Title</p>
+                                <p class="mt-0.5 text-xs leading-relaxed opacity-90">@alert.Message</p>
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(alert.Href) && !string.IsNullOrWhiteSpace(alert.ActionLabel))
+                            {
+                                <a href="@alert.Href" class="btn btn-sm shrink-0">@alert.ActionLabel</a>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+        </article>
+    </section>
+</div>
+
+@section Scripts {
+    <script src="~/js/countdown.js" asp-append-version="true"></script>
+    <script src="~/js/ds-sync.js" asp-append-version="true"></script>
+}

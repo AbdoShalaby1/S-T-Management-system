@@ -1,0 +1,726 @@
+@import "tailwindcss";
+
+@source "../Views/**/*.cshtml";
+@source "../wwwroot/js/**/*.js";
+
+/* ---------- Self-hosted fonts ---------- */
+
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../fonts/inter-latin-400-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("../fonts/inter-latin-500-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("../fonts/inter-latin-600-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../fonts/inter-latin-700-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../fonts/jetbrains-mono-latin-400-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("../fonts/jetbrains-mono-latin-500-normal.woff2") format("woff2");
+}
+
+/* ---------- Design tokens (PLAN §14.1) ---------- */
+/* Flat, warm monochrome: deep charcoal, ivory text and a single copper accent.
+   No decorative gradients; depth comes from hairlines and spacing only. */
+
+@theme {
+  --color-bg: #0a0a0a;
+  --color-surface: #111110;
+  --color-surface-2: #171715;
+  --color-elevated: #1e1d1a;
+  --color-border: #2d2a26;
+  --color-text: #f1eee7;
+  --color-muted: #a09b90;
+  --color-accent: #cc8443;
+  --color-accent-hover: #d99a5c;
+  --color-accent-soft: rgb(204 132 67 / 0.12);
+
+  /* Status colours stay muted so they sit beside the grey/copper palette
+     instead of competing with it (PLAN §14.1). */
+  --color-success: #8fbf9a;
+  --color-warning: #d8b273;
+  --color-danger: #d98b82;
+  --color-info: #a6aeb8;
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, "Cascadia Mono", monospace;
+
+  --radius-card: 14px;
+  --radius-input: 10px;
+
+  --shadow-soft: 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow-pop: 0 20px 50px -24px rgb(0 0 0 / 0.8);
+}
+
+/* ---------- Utilities ---------- */
+
+@utility nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Base ---------- */
+
+@layer base {
+  html {
+    color-scheme: dark;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-bg font-sans text-text antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-semibold tracking-tight;
+  }
+
+  h1,
+  h2 {
+    text-wrap: balance;
+  }
+
+  /* Keep in-page anchors clear of the sticky top bar. */
+  [id] {
+    scroll-margin-top: 5rem;
+  }
+
+  ::selection {
+    @apply bg-accent/30 text-text;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-accent/70 ring-offset-2 ring-offset-bg;
+  }
+
+  input[type="checkbox"]:focus-visible,
+  input[type="radio"]:focus-visible {
+    @apply ring-2 ring-accent/50 ring-offset-0;
+  }
+
+  a {
+    @apply transition-colors;
+  }
+
+  /* Tailwind v4 leaves buttons with the browser default cursor; keep every
+     interactive control pointing. */
+  button,
+  [role="button"],
+  input[type="submit"],
+  input[type="button"],
+  input[type="reset"],
+  input[type="file"],
+  input[type="checkbox"],
+  input[type="radio"],
+  summary,
+  select,
+  label[for] {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [aria-disabled="true"],
+  input:disabled,
+  select:disabled {
+    cursor: not-allowed;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border) transparent;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--color-border);
+    border-radius: 9999px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-muted);
+  }
+}
+
+/* ---------- Components ---------- */
+
+@layer components {
+  .card {
+    @apply rounded-card border border-border bg-surface shadow-soft;
+  }
+
+  .card-body {
+    @apply p-5 sm:p-6;
+  }
+
+  .card-header {
+    @apply flex items-center justify-between gap-3 border-b border-border px-5 py-4;
+  }
+
+  .card-title {
+    @apply text-[15px] font-semibold text-text;
+  }
+
+  .card-meta {
+    @apply text-xs font-medium uppercase tracking-[0.12em] text-muted;
+  }
+
+  .section-title {
+    @apply text-[17px] font-semibold tracking-tight text-text;
+  }
+
+  /* buttons */
+  .btn {
+    @apply inline-flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-input border border-border bg-surface-2 px-3.5 text-sm font-medium text-text shadow-[inset_0_1px_0_rgb(255_255_255/0.04)] transition-[background-color,border-color,color,box-shadow,transform] duration-150 hover:border-muted/25 hover:bg-elevated active:translate-y-px disabled:pointer-events-none disabled:opacity-50;
+  }
+
+  .btn-primary {
+    @apply border-transparent bg-accent font-semibold text-bg hover:bg-accent-hover;
+  }
+
+  .btn-ghost {
+    @apply border-transparent bg-transparent text-muted shadow-none hover:bg-surface-2 hover:text-text;
+  }
+
+  .btn-danger {
+    @apply border border-danger/25 bg-danger/15 text-danger hover:bg-danger/25;
+  }
+
+  .btn-sm {
+    @apply min-h-8 rounded-lg px-2.5 text-[13px];
+  }
+
+  .btn-icon {
+    @apply inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-input text-muted transition-colors hover:bg-surface-2 hover:text-text disabled:cursor-not-allowed disabled:opacity-40;
+  }
+
+  /* forms */
+  .input {
+    @apply h-10 w-full rounded-input border border-border bg-surface-2 px-3 text-sm text-text transition-[border-color,box-shadow] duration-150 placeholder:text-muted/80 hover:border-muted/30 focus:border-accent/50 focus:outline-none focus:shadow-[0_0_0_2px_rgb(204_132_67/0.08)];
+  }
+
+  /* The global focus ring is offset from the control, which reads as a second
+     border on text fields. Their border + soft glow is the focus cue instead. */
+  .input:focus-visible {
+    @apply ring-0 ring-offset-0;
+  }
+
+  .label {
+    @apply mb-1.5 block text-[13px] font-medium text-muted;
+  }
+
+  .hint {
+    @apply mt-1.5 text-xs leading-relaxed text-muted;
+  }
+
+  .field-error {
+    @apply mt-1.5 text-xs font-medium text-danger;
+  }
+
+  /* pills and badges */
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-border bg-surface-2/60 px-2.5 py-1 text-xs font-medium text-muted transition-colors;
+  }
+
+  .chip-strong {
+    @apply border-accent/30 bg-accent-soft text-accent;
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide ring-1 ring-inset ring-white/5;
+  }
+
+  .badge-easy {
+    @apply bg-success/15 text-success;
+  }
+
+  .badge-medium {
+    @apply bg-warning/15 text-warning;
+  }
+
+  .badge-hard {
+    @apply bg-danger/15 text-danger;
+  }
+
+  .badge-late {
+    @apply bg-warning/15 text-warning;
+  }
+
+  .badge-graded {
+    @apply bg-success/15 text-success;
+  }
+
+  .badge-pending {
+    @apply bg-info/15 text-info;
+  }
+
+  .badge-active {
+    @apply bg-accent-soft text-accent;
+  }
+
+  .badge-hidden {
+    @apply bg-surface-2 text-muted;
+  }
+
+  /* platform and taxonomy pills on DS problems */
+  .badge-platform-lc {
+    @apply bg-accent-soft text-accent;
+  }
+
+  .badge-platform-cf {
+    @apply bg-info/15 text-info;
+  }
+
+  /* tables */
+  .data-table {
+    @apply w-full border-collapse text-sm;
+  }
+
+  .data-table thead th {
+    @apply sticky top-0 z-10 border-b border-border bg-surface-2/95 px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted backdrop-blur;
+  }
+
+  .data-table tbody td {
+    @apply border-b border-border/60 px-3 py-3 align-middle;
+  }
+
+  .data-table tbody tr:last-child td {
+    @apply border-b-0;
+  }
+
+  .data-table tbody tr:hover {
+    @apply bg-accent/[0.04];
+  }
+
+  /* navigation */
+  .nav-group-label {
+    @apply px-3 pb-1.5 pt-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted/70;
+  }
+
+  .nav-link {
+    @apply relative flex cursor-pointer items-center gap-3 rounded-input px-3 py-2 text-sm font-medium text-muted transition-colors hover:bg-surface-2 hover:text-text;
+  }
+
+  .nav-link-active {
+    @apply bg-accent-soft text-accent hover:bg-accent-soft hover:text-accent;
+  }
+
+  .nav-link-active::before {
+    content: "";
+    @apply absolute left-0 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-full bg-accent;
+  }
+
+  .nav-link-soon {
+    @apply cursor-default opacity-40 hover:bg-transparent hover:text-muted;
+  }
+
+  .nav-badge {
+    @apply ml-auto rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-bold leading-none text-bg;
+  }
+
+  /* Dims the page behind the mobile drawer; nav.js toggles `hidden`. */
+  .sidebar-scrim {
+    @apply fixed inset-0 z-[35] bg-black/50 backdrop-blur-sm lg:hidden;
+    animation: fade-in 140ms ease-out;
+  }
+
+  /* layout fragments */
+  .stat-tile {
+    @apply relative overflow-hidden rounded-card border border-border bg-surface p-4 transition-[border-color,background-color] duration-200 hover:border-muted/25 hover:bg-surface-2/40;
+  }
+
+  .stat-label {
+    @apply text-xs font-medium uppercase tracking-[0.1em] text-muted;
+  }
+
+  .stat-value {
+    @apply mt-2 text-2xl font-semibold text-text nums;
+  }
+
+  .empty-state {
+    @apply flex flex-col items-center justify-center rounded-card border border-dashed border-border px-6 py-10 text-center;
+  }
+
+  /* toasts */
+  .toast {
+    @apply pointer-events-auto relative grid w-[min(92vw,380px)] grid-cols-[auto_1fr_auto] items-start gap-3 overflow-hidden rounded-xl border border-border border-l-2 bg-elevated p-3.5 shadow-pop;
+    animation: toast-in 180ms ease-out;
+  }
+
+  .toast[data-type="success"] {
+    @apply border-l-success/70;
+  }
+
+  .toast[data-type="error"] {
+    @apply border-l-danger/70;
+  }
+
+  .toast[data-type="warning"] {
+    @apply border-l-warning/70;
+  }
+
+  .toast[data-type="info"] {
+    @apply border-l-info/70;
+  }
+
+  .toast-icon {
+    @apply mt-0.5 text-base;
+  }
+
+  .toast[data-type="success"] .toast-icon {
+    @apply text-success;
+  }
+
+  .toast[data-type="error"] .toast-icon {
+    @apply text-danger;
+  }
+
+  .toast[data-type="warning"] .toast-icon {
+    @apply text-warning;
+  }
+
+  .toast[data-type="info"] .toast-icon {
+    @apply text-info;
+  }
+
+  .toast-title {
+    @apply text-sm font-semibold text-text;
+  }
+
+  .toast-message {
+    @apply text-[13px] leading-relaxed text-muted;
+  }
+
+  .toast[data-type="success"] .toast-progress {
+    @apply bg-success;
+  }
+
+  .toast[data-type="error"] .toast-progress {
+    @apply bg-danger;
+  }
+
+  .toast[data-type="warning"] .toast-progress {
+    @apply bg-warning;
+  }
+
+  .toast[data-type="info"] .toast-progress {
+    @apply bg-info;
+  }
+
+  /* modal */
+  .modal-scrim {
+    @apply fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 backdrop-blur-sm sm:items-center;
+    animation: fade-in 140ms ease-out;
+  }
+
+  .modal-panel {
+    @apply w-full max-w-md rounded-card border border-border bg-elevated p-5 shadow-pop;
+    animation: modal-in 160ms ease-out;
+  }
+
+  /* misc */
+  .divider {
+    @apply h-px w-full bg-border;
+  }
+
+  /* folder upload */
+  .upload-zone {
+    @apply flex flex-col items-center justify-center rounded-card border border-dashed border-border bg-surface-2/40 px-4 py-8 text-center transition-colors hover:border-accent/40 hover:bg-surface-2/70;
+  }
+
+  /* The real file input is visually hidden, so show where keyboard focus went. */
+  .upload-zone:focus-within {
+    @apply border-accent/50 bg-surface-2/70 ring-1 ring-accent/15;
+  }
+
+  .upload-zone.is-dragging {
+    @apply border-accent bg-accent-soft/30;
+  }
+
+  .upload-track {
+    @apply h-2 w-full overflow-hidden rounded-full bg-surface-2;
+  }
+
+  .upload-bar {
+    @apply h-full w-0 rounded-full bg-accent transition-[width] duration-200;
+  }
+
+  .skeleton {
+    @apply animate-pulse rounded-md bg-surface-2;
+  }
+
+  .kbd {
+    @apply rounded border border-border bg-surface-2 px-1.5 py-0.5 font-mono text-[11px] text-muted;
+  }
+
+  /* rendered markdown */
+  .md-body {
+    @apply text-sm leading-relaxed text-muted;
+  }
+
+  .md-body > :first-child {
+    @apply mt-0;
+  }
+
+  .md-body > * + * {
+    @apply mt-3;
+  }
+
+  .md-body h1 {
+    @apply mt-6 text-xl font-semibold tracking-tight text-text;
+  }
+
+  .md-body h2 {
+    @apply mt-5 text-lg font-semibold tracking-tight text-text;
+  }
+
+  .md-body h3,
+  .md-body h4 {
+    @apply mt-4 text-[15px] font-semibold text-text;
+  }
+
+  .md-body a {
+    @apply text-accent underline decoration-accent/40 underline-offset-2 hover:text-accent-hover;
+  }
+
+  .md-body strong {
+    @apply font-semibold text-text;
+  }
+
+  .md-body ul {
+    @apply list-disc pl-5;
+  }
+
+  .md-body ol {
+    @apply list-decimal pl-5;
+  }
+
+  .md-body li + li {
+    @apply mt-1;
+  }
+
+  .md-body code {
+    @apply rounded bg-surface-2 px-1 py-0.5 font-mono text-[12px] text-text;
+  }
+
+  .md-body pre {
+    @apply overflow-x-auto rounded-lg border border-border bg-surface-2 p-3 font-mono text-[12px] leading-relaxed;
+  }
+
+  .md-body pre code {
+    @apply bg-transparent p-0 text-[12px];
+  }
+
+  .md-body blockquote {
+    @apply border-l-2 border-border pl-3;
+  }
+
+  .md-body table {
+    @apply w-full border-collapse text-sm;
+  }
+
+  .md-body th,
+  .md-body td {
+    @apply border border-border px-2.5 py-1.5 text-left;
+  }
+
+  .md-body th {
+    @apply bg-surface-2 font-semibold text-text;
+  }
+
+  .md-body hr {
+    @apply border-border;
+  }
+
+  /* code blocks: reference solutions and Prism-highlighted fences */
+  .code-shell {
+    @apply overflow-hidden rounded-card border border-border bg-surface-2;
+  }
+
+  .code-shell-head {
+    @apply flex flex-wrap items-center justify-between gap-2 border-b border-border bg-surface px-3 py-2;
+  }
+
+  .code-shell-name {
+    @apply truncate font-mono text-[11px] text-muted;
+  }
+
+  .code-shell pre[class*="language-"] {
+    @apply m-0 overflow-x-auto bg-transparent p-3 font-mono text-[12px] leading-relaxed;
+    max-height: 32rem;
+  }
+
+  .code-shell pre[class*="language-"] code {
+    @apply bg-transparent p-0 text-[12px];
+    text-shadow: none;
+  }
+
+  .md-body pre[class*="language-"] {
+    @apply border-border bg-surface-2;
+    text-shadow: none;
+  }
+
+  .md-body pre[class*="language-"] code {
+    text-shadow: none;
+  }
+
+  /* Prism's tomorrow theme ships light-on-dark tokens; keep the panel on our surface. */
+  pre[class*="language-"],
+  code[class*="language-"] {
+    text-shadow: none;
+  }
+
+  .md-body .toc {
+    @apply rounded-card border border-border bg-surface p-3 text-xs;
+  }
+
+  .md-body .toc-title {
+    @apply mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted;
+  }
+
+  .md-body .toc ol {
+    @apply list-none pl-0;
+  }
+
+  .md-body .toc li + li {
+    @apply mt-1;
+  }
+
+  .md-body .toc li[data-level="3"] {
+    @apply pl-3;
+  }
+
+  /* accordion built on native details/summary */
+  .accordion > summary {
+    list-style: none;
+    cursor: pointer;
+  }
+
+  .accordion > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .accordion .accordion-chevron {
+    transition: transform 150ms ease-out;
+  }
+
+  .accordion[open] .accordion-chevron {
+    transform: rotate(90deg);
+  }
+}
+
+/* ---------- Animations ---------- */
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes toast-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes toast-progress {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.toast-progress {
+  animation-name: toast-progress;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+.toast.is-leaving {
+  animation: toast-out 140ms ease-in forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

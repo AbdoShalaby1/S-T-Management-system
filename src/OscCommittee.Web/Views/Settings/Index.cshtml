@@ -1,0 +1,190 @@
+@model SettingsViewModel
+@{
+    ViewData["Title"] = "Settings";
+}
+<div class="flex flex-col gap-6">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+            <p class="card-meta">@Model.MonthLabel</p>
+            <h1 class="mt-1 text-[26px] font-semibold leading-tight tracking-tight">Settings</h1>
+        </div>
+        @if (Model.IsBoard)
+        {
+            <span class="chip chip-strong">
+                <i class="fa-solid fa-shield-halved text-[11px]" aria-hidden="true"></i>
+                Board access
+            </span>
+        }
+    </div>
+
+    <div class="grid gap-4 lg:grid-cols-[1.55fr_1fr] lg:items-start">
+        <div class="flex flex-col gap-4">
+            <article class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Profile</h2>
+                    <span class="chip">Visible to the board</span>
+                </div>
+
+                <form method="post" asp-controller="Settings" asp-action="Profile"
+                      class="card-body flex flex-col gap-4">
+                    @if (!ViewData.ModelState.IsValid && ViewData["SettingsForm"] as string == "profile")
+                    {
+                        <div asp-validation-summary="ModelOnly"
+                             class="rounded-input border border-danger/30 bg-danger/10 px-3 py-2 text-[13px] leading-relaxed text-danger"></div>
+                    }
+
+                    <div>
+                        <label asp-for="Profile.DisplayName" class="label"></label>
+                        <input asp-for="Profile.DisplayName" class="input" autocomplete="name" autofocus />
+                        <span asp-validation-for="Profile.DisplayName" class="field-error"></span>
+                    </div>
+
+                    <div>
+                        <label asp-for="Profile.LeetCodeHandle" class="label"></label>
+                        <div class="flex items-start gap-2">
+                            <div class="min-w-0 flex-1">
+                                <input asp-for="Profile.LeetCodeHandle" class="input" autocomplete="off"
+                                       placeholder="your-leetcode-handle" />
+                                <span asp-validation-for="Profile.LeetCodeHandle" class="field-error"></span>
+                            </div>
+                            <button type="button" class="btn shrink-0"
+                                    data-handle-verify data-platform="LeetCode" data-input="Profile_LeetCodeHandle"
+                                    data-verify-url="@Url.Action("VerifyHandle", "Settings")">
+                                <i class="fa-solid fa-circle-check text-[11px] text-muted" aria-hidden="true"></i>
+                                Verify
+                            </button>
+                        </div>
+                        <p class="hint">
+                            @if (Model.Profile.LeetCodeVerifiedAtUtc is null)
+                            {
+                                <span data-handle-status="LeetCode">Not verified</span>
+                            }
+                            else
+                            {
+                                <span class="text-success" data-handle-status="LeetCode">Verified</span>
+                            }
+                        </p>
+                    </div>
+
+                    <div>
+                        <label asp-for="Profile.CodeforcesHandle" class="label"></label>
+                        <div class="flex items-start gap-2">
+                            <div class="min-w-0 flex-1">
+                                <input asp-for="Profile.CodeforcesHandle" class="input" autocomplete="off"
+                                       placeholder="your-codeforces-handle" />
+                                <span asp-validation-for="Profile.CodeforcesHandle" class="field-error"></span>
+                            </div>
+                            <button type="button" class="btn shrink-0"
+                                    data-handle-verify data-platform="Codeforces" data-input="Profile_CodeforcesHandle"
+                                    data-verify-url="@Url.Action("VerifyHandle", "Settings")">
+                                <i class="fa-solid fa-circle-check text-[11px] text-muted" aria-hidden="true"></i>
+                                Verify
+                            </button>
+                        </div>
+                        <p class="hint">
+                            @if (Model.Profile.CodeforcesVerifiedAtUtc is null)
+                            {
+                                <span data-handle-status="Codeforces">Not verified</span>
+                            }
+                            else
+                            {
+                                <span class="text-success" data-handle-status="Codeforces">Verified</span>
+                            }
+                        </p>
+                    </div>
+
+                    <div class="mt-1 flex justify-end">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fa-solid fa-floppy-disk text-xs" aria-hidden="true"></i>
+                            Save profile
+                        </button>
+                    </div>
+                </form>
+            </article>
+
+            <article class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Password</h2>
+                    <span class="chip">At least 8 characters</span>
+                </div>
+
+                <form method="post" asp-controller="Settings" asp-action="Password"
+                      class="card-body flex flex-col gap-4">
+                    @if (!ViewData.ModelState.IsValid && ViewData["SettingsForm"] as string == "password")
+                    {
+                        <div asp-validation-summary="ModelOnly"
+                             class="rounded-input border border-danger/30 bg-danger/10 px-3 py-2 text-[13px] leading-relaxed text-danger"></div>
+                    }
+
+                    <div>
+                        <label asp-for="Password.CurrentPassword" class="label"></label>
+                        <input asp-for="Password.CurrentPassword" class="input" autocomplete="current-password" />
+                        <span asp-validation-for="Password.CurrentPassword" class="field-error"></span>
+                    </div>
+
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <div>
+                            <label asp-for="Password.NewPassword" class="label"></label>
+                            <input asp-for="Password.NewPassword" class="input" autocomplete="new-password" />
+                            <span asp-validation-for="Password.NewPassword" class="field-error"></span>
+                        </div>
+                        <div>
+                            <label asp-for="Password.ConfirmPassword" class="label"></label>
+                            <input asp-for="Password.ConfirmPassword" class="input" autocomplete="new-password" />
+                            <span asp-validation-for="Password.ConfirmPassword" class="field-error"></span>
+                        </div>
+                    </div>
+
+                    <div class="mt-1 flex justify-end">
+                        <button type="submit" class="btn">
+                            <i class="fa-solid fa-key text-xs" aria-hidden="true"></i>
+                            Change password
+                        </button>
+                    </div>
+                </form>
+            </article>
+        </div>
+
+        <aside class="flex flex-col gap-4">
+            <article class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Account</h2>
+                </div>
+                <div class="card-body flex flex-col gap-4">
+                    <div class="flex items-center gap-3">
+                        <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent-soft text-sm font-semibold uppercase text-accent"
+                              aria-hidden="true">@Model.Initials</span>
+                        <div class="min-w-0">
+                            <p class="truncate text-sm font-medium text-text">@Model.Profile.DisplayName</p>
+                        </div>
+                    </div>
+
+                    <div class="divider"></div>
+
+                    <dl class="flex flex-col gap-3 text-sm">
+                        <div class="flex items-center justify-between gap-3">
+                            <dt class="text-muted">Email</dt>
+                            <dd class="truncate text-right font-medium text-text">@Model.Email</dd>
+                        </div>
+                        <div class="flex items-center justify-between gap-3">
+                            <dt class="text-muted">Status</dt>
+                            <dd class="font-medium text-text">@Model.StatusLabel</dd>
+                        </div>
+                        <div class="flex items-center justify-between gap-3">
+                            <dt class="text-muted">Member since</dt>
+                            <dd class="nums font-medium text-text">@Model.MemberSinceLabel</dd>
+                        </div>
+                        <div class="flex items-center justify-between gap-3">
+                            <dt class="text-muted">Points in @Model.MonthLabel</dt>
+                            <dd class="nums font-medium text-text">@Model.CurrentMonthPointsLabel</dd>
+                        </div>
+                    </dl>
+                </div>
+            </article>
+        </aside>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/handle-verify.js" asp-append-version="true"></script>
+}

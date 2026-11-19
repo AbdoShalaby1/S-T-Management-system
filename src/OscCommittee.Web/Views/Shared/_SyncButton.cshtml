@@ -1,0 +1,35 @@
+@model OscCommittee.Web.ViewModels.Ds.DsSyncButtonViewModel
+<div class="flex flex-wrap items-center justify-end gap-2"
+     data-sync-root
+     data-sync-url="@Url.Action("Sync", "Ds")"
+     data-sync-in-progress="@(Model.InProgress ? "true" : "false")">
+    @if (!Model.HasAnyHandle)
+    {
+        <span class="text-[11px] text-muted">
+            <a asp-controller="Settings" asp-action="Index" class="font-medium text-accent hover:text-accent-hover">Add a handle</a>
+            in Settings to sync solves.
+        </span>
+        <button type="button" class="btn btn-sm" disabled
+                title="Add a LeetCode or Codeforces handle before syncing.">
+            <i class="fa-solid fa-rotate text-[11px] text-muted" aria-hidden="true"></i>
+            Sync solves
+        </button>
+    }
+    else
+    {
+        <span class="text-[11px] text-muted" data-sync-status>
+            @if (Model.InProgress)
+            {
+                <text>Sync already running…</text>
+            }
+        </span>
+        <form method="post" asp-controller="Ds" asp-action="Sync" data-sync-form>
+            <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+            <button type="submit" class="btn btn-sm" data-sync-button
+                    disabled="@(Model.CanSync ? null : "disabled")">
+                <i class="fa-solid fa-rotate text-[11px]" data-sync-icon aria-hidden="true"></i>
+                <span data-sync-label>Sync solves</span>
+            </button>
+        </form>
+    }
+</div>

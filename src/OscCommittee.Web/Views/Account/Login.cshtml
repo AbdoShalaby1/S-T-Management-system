@@ -1,0 +1,52 @@
+@model LoginViewModel
+@{
+    Layout = "_AuthLayout";
+    ViewData["Title"] = "Sign in";
+    var returnUrl = ViewData["ReturnUrl"] as string;
+}
+<div class="card">
+    <div class="card-body">
+        <h1 class="text-xl font-semibold tracking-tight">Sign in</h1>
+        <p class="mt-1 text-sm text-muted">Use the email you registered with.</p>
+
+        <form method="post" asp-controller="Account" asp-action="Login" asp-route-returnUrl="@returnUrl" class="mt-6 flex flex-col gap-4">
+            @if (!ViewData.ModelState.IsValid)
+            {
+                <div asp-validation-summary="ModelOnly"
+                     class="rounded-input border border-danger/30 bg-danger/10 px-3 py-2 text-[13px] leading-relaxed text-danger"></div>
+            }
+
+            <div>
+                <label asp-for="Email" class="label"></label>
+                <input asp-for="Email" class="input" autocomplete="email" autofocus />
+                <span asp-validation-for="Email" class="field-error"></span>
+            </div>
+
+            <div>
+                <label asp-for="Password" class="label"></label>
+                <input asp-for="Password" class="input" autocomplete="current-password" />
+                <span asp-validation-for="Password" class="field-error"></span>
+            </div>
+
+            <label class="flex items-center gap-2 text-sm text-muted">
+                <input asp-for="RememberMe" type="checkbox"
+                       class="h-4 w-4 rounded border-border bg-surface-2 accent-accent" />
+                <span>Keep me signed in on this device</span>
+            </label>
+
+            <button type="submit" class="btn btn-primary w-full">
+                <i class="fa-solid fa-arrow-right-to-bracket text-xs" aria-hidden="true"></i>
+                Sign in
+            </button>
+        </form>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="flex flex-wrap items-center justify-between gap-2 px-5 py-4 text-sm">
+        <span class="text-muted">New here?</span>
+        <a asp-controller="Account" asp-action="Register" class="font-medium text-accent hover:text-accent-hover">
+            Request access
+        </a>
+    </div>
+</div>

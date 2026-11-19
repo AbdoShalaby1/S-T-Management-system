@@ -1,0 +1,123 @@
+@model MonthsViewModel
+@{
+    var tiles = new[]
+    {
+        ("Open", Model.OpenCount.ToString(), "fa-regular fa-calendar-check", "Accepting new points"),
+        ("Closed", Model.ClosedCount.ToString(), "fa-solid fa-lock", "History stays editable"),
+        ("Current", Model.CurrentMonthLabel, "fa-regular fa-calendar-days", "Created on first access")
+    };
+}
+<div class="flex flex-col gap-6">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+            <nav class="flex items-center gap-2 text-xs text-muted" aria-label="Breadcrumb">
+                <a asp-controller="Board" asp-action="Index" class="hover:text-text">Board</a>
+                <i class="fa-solid fa-chevron-right text-[9px]" aria-hidden="true"></i>
+                <span class="text-text">Months</span>
+            </nav>
+            <h1 class="mt-2 text-[26px] font-semibold leading-tight tracking-tight">Months</h1>
+        </div>
+    </div>
+
+    <section class="grid gap-4 sm:grid-cols-3">
+        @foreach (var (label, value, icon, hint) in tiles)
+        {
+            <article class="stat-tile">
+                <div class="flex items-start justify-between gap-2">
+                    <p class="stat-label">@label</p>
+                    <i class="@icon text-xs text-muted" aria-hidden="true"></i>
+                </div>
+                <p class="stat-value">@value</p>
+                <p class="mt-1 text-xs text-muted">@hint</p>
+            </article>
+        }
+    </section>
+
+    <section class="card overflow-hidden">
+        @if (Model.Months.Count == 0)
+        {
+            <div class="card-body">
+                <partial name="_EmptyState" model="@(new EmptyStateModel {
+                    Icon = "fa-regular fa-calendar-days",
+                    Title = "No months yet",
+                    Description = "Created automatically when needed."
+                })" />
+            </div>
+        }
+        else
+        {
+            <div class="overflow-x-auto">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Month</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Opened</th>
+                            <th scope="col">Closed</th>
+                            <th scope="col">Closed by</th>
+                            <th scope="col" class="text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var month in Model.Months)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-sm font-medium text-text">@month.Label</span>
+                                        @if (month.IsCurrent)
+                                        {
+                                            <span class="badge badge-active">Current</span>
+                                        }
+                                    </div>
+                                </td>
+                                <td>
+                                    @if (month.CanOpen)
+                                    {
+                                        <span class="badge badge-hidden">Closed</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge badge-graded">Open</span>
+                                    }
+                                </td>
+                                <td class="whitespace-nowrap text-xs text-muted">@month.OpenedLabel</td>
+                                <td class="whitespace-nowrap text-xs text-muted">@month.ClosedLabel</td>
+                                <td class="whitespace-nowrap text-xs text-muted">@month.ClosedByLabel</td>
+                                <td>
+                                    <div class="flex justify-end">
+                                        @if (month.CanClose)
+                                        {
+                                            <form method="post" asp-controller="Months" asp-action="Close" asp-route-id="@month.Id"
+                                                  data-confirm="Closing @month.Label does not lock it: items stay open until their deadlines and the board can still edit scores."
+                                                  data-confirm-title="Close @month.Label?"
+                                                  data-confirm-label="Close month">
+                                                <button type="submit" class="btn btn-sm">
+                                                    <i class="fa-solid fa-lock text-[11px]" aria-hidden="true"></i>
+                                                    Close
+                                                </button>
+                                            </form>
+                                        }
+                                        else
+                                        {
+                                            <form method="post" asp-controller="Months" asp-action="Open" asp-route-id="@month.Id"
+                                                  data-confirm="New work and points can be added to @month.Label again. Nothing is deleted."
+                                                  data-confirm-title="Reopen @month.Label?"
+                                                  data-confirm-label="Reopen month"
+                                                  data-confirm-danger="false">
+                                                <button type="submit" class="btn btn-sm">
+                                                    <i class="fa-solid fa-lock-open text-[11px]" aria-hidden="true"></i>
+                                                    Reopen
+                                                </button>
+                                            </form>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+</div>

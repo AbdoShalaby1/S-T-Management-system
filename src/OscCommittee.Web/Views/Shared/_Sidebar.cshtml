@@ -1,0 +1,89 @@
+@inject IMemberAdminService MemberAdmin
+@{
+    var showBoard = User.IsInRole(Roles.Board);
+    var pendingCount = showBoard ? await MemberAdmin.CountPendingAsync() : 0;
+
+    var overview = new NavItem("Dashboard", "fa-solid fa-gauge-high", Url.Action("Index", "Home") ?? "/", "Home");
+
+    var learning = new[]
+    {
+        new NavItem("Data structures", "fa-solid fa-layer-group", "/ds", "Ds"),
+        new NavItem("C# tasks", "fa-solid fa-code", "/tasks", "Tasks"),
+        new NavItem("Standings", "fa-solid fa-ranking-star", "/standings", "Standings", ActivePath: "/standings"),
+        new NavItem("Points", "fa-solid fa-coins", "/points", "Standings", ActivePath: "/points"),
+        new NavItem("Topics", "fa-solid fa-book-open", "/content", "Content")
+    };
+
+    var account = new[]
+    {
+        new NavItem("Settings", "fa-solid fa-gear", "/settings", "Settings")
+    };
+
+    var board = new[]
+    {
+        new NavItem("Board home", "fa-solid fa-shield-halved", "/board", "Board"),
+        new NavItem("Approvals", "fa-solid fa-user-check", "/board/approvals", "Approvals",
+            Badge: pendingCount > 0 ? pendingCount.ToString() : null),
+        new NavItem("Members", "fa-solid fa-users", "/board/members", "Members"),
+        new NavItem("Months", "fa-regular fa-calendar-days", "/board/months", "Months"),
+        new NavItem("DS sheets", "fa-solid fa-layer-group", "/board/ds/sheets", "DsSheets"),
+        new NavItem("C# tasks", "fa-solid fa-code", "/board/tasks", "BoardTasks"),
+        new NavItem("Topics", "fa-solid fa-book-open", "/board/content", "BoardContent"),
+        new NavItem("Points", "fa-solid fa-coins", "/board/points", "BoardPoints"),
+        new NavItem("Standings", "fa-solid fa-ranking-star", "/standings", "Standings", ActivePath: "/standings")
+    };
+}
+<aside id="sidebar"
+       class="fixed inset-y-0 left-0 z-40 flex w-[248px] -translate-x-full flex-col border-r border-border bg-surface transition-transform duration-200 ease-out lg:translate-x-0"
+       aria-label="Main navigation">
+    <a href="@(showBoard ? Url.Action("Index", "Board") : Url.Action("Index", "Home"))"
+       class="flex h-16 shrink-0 items-center gap-2.5 border-b border-border px-4">
+        <img src="~/img/osc.png" asp-append-version="true" alt=""
+             class="h-8 w-8 shrink-0 rounded-lg object-contain" />
+        <span class="flex min-w-0 flex-col leading-tight">
+            <span class="truncate text-sm font-semibold tracking-tight text-text">Science &amp; Technology</span>
+            <span class="truncate text-[10px] font-medium uppercase tracking-[0.16em] text-muted/70">Committee</span>
+        </span>
+    </a>
+
+    <nav class="flex-1 overflow-y-auto px-2 pb-4">
+        @if (!showBoard)
+        {
+            <p class="nav-group-label">Overview</p>
+            <partial name="_NavItem" model="overview" />
+
+            <p class="nav-group-label">Learning</p>
+            @foreach (var item in learning)
+            {
+                <partial name="_NavItem" model="item" />
+            }
+        }
+
+        @if (showBoard)
+        {
+            <p class="nav-group-label">Board</p>
+            @foreach (var item in board)
+            {
+                <partial name="_NavItem" model="item" />
+            }
+        }
+
+        @if (!showBoard)
+        {
+            <p class="nav-group-label">Account</p>
+            @foreach (var item in account)
+            {
+                <partial name="_NavItem" model="item" />
+            }
+        }
+    </nav>
+
+    <div class="border-t border-border p-2">
+        <form method="post" asp-controller="Account" asp-action="Logout">
+            <button type="submit" class="nav-link w-full text-left">
+                <i class="fa-solid fa-arrow-right-from-bracket w-4 shrink-0 text-center text-[13px]" aria-hidden="true"></i>
+                <span>Sign out</span>
+            </button>
+        </form>
+    </div>
+</aside>

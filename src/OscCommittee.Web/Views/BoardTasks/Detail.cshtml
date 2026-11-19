@@ -1,0 +1,150 @@
+@model CSharpTaskDetailViewModel
+<div class="flex flex-col gap-6">
+    <div>
+        <nav class="flex flex-wrap items-center gap-2 text-xs text-muted" aria-label="Breadcrumb">
+            <a asp-controller="Board" asp-action="Index" class="hover:text-text">Board</a>
+            <i class="fa-solid fa-chevron-right text-[9px]" aria-hidden="true"></i>
+            <a asp-controller="BoardTasks" asp-action="Index" class="hover:text-text">C# tasks</a>
+            <i class="fa-solid fa-chevron-right text-[9px]" aria-hidden="true"></i>
+            <span class="text-text">@Model.Title</span>
+        </nav>
+
+        <div class="mt-2 flex flex-wrap items-end justify-between gap-3">
+            <div>
+                <p class="card-meta">@Model.MonthLabel · deadline @Model.DueLabel</p>
+                <h1 class="mt-1 text-[26px] font-semibold leading-tight tracking-tight">@Model.Title</h1>
+                <div class="mt-2 flex flex-wrap items-center gap-1.5">
+                    <span class="badge @Model.StatusBadgeClass">@Model.StatusLabel</span>
+                </div>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+                <a asp-controller="BoardTasks" asp-action="Submissions" asp-route-id="@Model.Id" class="btn">
+                    <i class="fa-solid fa-inbox text-[10px]" aria-hidden="true"></i>
+                    Attempts
+                </a>
+                <a asp-controller="BoardTasks" asp-action="Edit" asp-route-id="@Model.Id" class="btn">
+                    <i class="fa-solid fa-pen text-[10px]" aria-hidden="true"></i>
+                    Edit task
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <section class="card">
+        <div class="card-header">
+            <h2 class="card-title">Statement</h2>
+            <span class="chip">What members read</span>
+        </div>
+        <div class="card-body">
+            @if (Model.HasStatement)
+            {
+                <div class="md-body">@Html.Raw(Model.StatementHtml)</div>
+            }
+            else
+            {
+                <p class="text-sm text-muted">No statement yet. Members see a short placeholder until you write one.</p>
+            }
+        </div>
+    </section>
+
+    @if (Model.HasStarterZip)
+    {
+        <section class="card">
+            <div class="card-header">
+                <h2 class="card-title">Starting code</h2>
+                <span class="chip">@FileBrowserModel.SizeLabel(Model.StarterZipSizeBytes)</span>
+            </div>
+            <div class="card-body flex flex-wrap items-center justify-between gap-3">
+                <div class="min-w-0">
+                    <p class="truncate text-sm font-medium text-text">@Model.StarterZipFileName</p>
+                    <p class="mt-1 text-xs leading-relaxed text-muted">
+                        Members download this zip and build on it before uploading their folder.
+                    </p>
+                </div>
+                <a asp-controller="BoardTasks" asp-action="DownloadStarter" asp-route-id="@Model.Id"
+                   class="btn btn-sm shrink-0">
+                    <i class="fa-solid fa-download text-[10px]" aria-hidden="true"></i>
+                    Download .zip
+                </a>
+            </div>
+        </section>
+    }
+
+    @if (Model.HasReference && Model.ReferenceFiles is not null)
+    {
+        <partial name="_FileBrowser" model="@(new FileBrowserModel(
+            Model.ReferenceFiles,
+            "Solution",
+            "Members see these files automatically once the deadline passes. The AI grader uses them as the model answer.",
+            Url.Action("DownloadReference", "BoardTasks", new { id = Model.Id }))
+        {
+            FileUrl = path => Url.Action("Detail", "BoardTasks", new { id = Model.Id, reference = path })!,
+            EmptyTitle = "Solution files missing",
+            EmptyDescription = "Upload the solution again from the edit page."
+        })" />
+    }
+
+    <section class="card overflow-hidden">
+        <div class="card-header">
+            <h2 class="card-title">Attempts</h2>
+            <span class="chip">@Model.Attempts.Count</span>
+        </div>
+
+        @if (Model.Attempts.Count == 0)
+        {
+            <div class="card-body">
+                <partial name="_EmptyState" model="@(new EmptyStateModel {
+                    Icon = "fa-solid fa-inbox",
+                    Title = "No attempts yet",
+                    Description = "Member submissions, their scores and their late flags will be listed here."
+                })" />
+            </div>
+        }
+        else
+        {
+            <div class="overflow-x-auto">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Member</th>
+                            <th scope="col">Attempt</th>
+                            <th scope="col">Submitted</th>
+                            <th scope="col">Late</th>
+                            <th scope="col">Status</th>
+                            <th scope="col" class="text-right">Score</th>
+                            <th scope="col" class="text-right">Points</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var attempt in Model.Attempts)
+                        {
+                            <tr>
+                                <td class="text-sm text-text">@attempt.MemberName</td>
+                                <td class="nums text-sm text-text">
+                                    <a asp-controller="Submissions" asp-action="Review" asp-route-id="@attempt.Id"
+                                       class="hover:text-accent">#@attempt.AttemptNumber</a>
+                                </td>
+                                <td class="nums text-xs text-muted">@attempt.SubmittedLabel</td>
+                                <td>
+                                    @if (attempt.IsLate)
+                                    {
+                                        <span class="badge badge-late">Late</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-xs text-muted">—</span>
+                                    }
+                                </td>
+                                <td>
+                                    <span class="badge @attempt.StatusBadgeClass">@attempt.StatusLabel</span>
+                                </td>
+                                <td class="nums text-right text-sm text-text">@attempt.ScoreLabel</td>
+                                <td class="nums text-right text-sm text-text">@attempt.PointsLabel</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+</div>

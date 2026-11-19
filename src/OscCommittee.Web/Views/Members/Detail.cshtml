@@ -1,0 +1,190 @@
+@model MemberDetailViewModel
+@inject OscCommittee.Web.Services.Common.ITimeZoneService TimeZone
+@{
+    var handleCount = (!string.IsNullOrWhiteSpace(Model.LeetCodeHandle) ? 1 : 0)
+        + (!string.IsNullOrWhiteSpace(Model.CodeforcesHandle) ? 1 : 0);
+}
+<div class="flex flex-col gap-6">
+    <div>
+        <nav class="flex flex-wrap items-center gap-2 text-xs text-muted" aria-label="Breadcrumb">
+            <a asp-controller="Board" asp-action="Index" class="hover:text-text">Board</a>
+            <i class="fa-solid fa-chevron-right text-[9px]" aria-hidden="true"></i>
+            <a asp-controller="Members" asp-action="Index" class="hover:text-text">Members</a>
+            <i class="fa-solid fa-chevron-right text-[9px]" aria-hidden="true"></i>
+            <span class="text-text">@Model.DisplayName</span>
+        </nav>
+
+        <div class="mt-2 flex flex-wrap items-end justify-between gap-3">
+            <div class="flex items-start gap-3">
+                <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent-soft text-sm font-semibold uppercase text-accent"
+                      aria-hidden="true">@Model.Initials</span>
+                <div>
+                    <h1 class="text-[26px] font-semibold leading-tight tracking-tight">@Model.DisplayName</h1>
+                    <p class="mt-0.5 text-sm text-muted">@Model.Email</p>
+                    <div class="mt-2 flex flex-wrap items-center gap-1.5">
+                        <span class="badge @Model.StatusBadgeClass">@Model.StatusLabel</span>
+                        @if (Model.IsBoard)
+                        {
+                            <span class="badge badge-active">Board</span>
+                        }
+                        <span class="chip">Joined @Model.JoinedLabel</span>
+                        @if (Model.ApprovedLabel is not null)
+                        {
+                            <span class="chip">Approved @Model.ApprovedLabel</span>
+                        }
+                        @if (Model.DeactivatedLabel is not null)
+                        {
+                            <span class="chip">Deactivated @Model.DeactivatedLabel</span>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2">
+                <a asp-controller="BoardPoints" asp-action="Member" asp-route-id="@Model.Id"
+                   class="btn btn-primary">
+                    <i class="fa-solid fa-coins text-[10px]" aria-hidden="true"></i>
+                    Points
+                </a>
+            </div>
+        </div>
+    </div>
+
+    @if (!Model.IsBoard && Model.HasMissingHandles)
+    {
+        <div class="rounded-input border border-warning/30 bg-warning/10 px-3 py-2 text-xs leading-relaxed text-warning">
+            <i class="fa-solid fa-triangle-exclamation mr-1" aria-hidden="true"></i>
+            This member has @handleCount of 2 handles set, so DS sync cannot credit every platform.
+        </div>
+    }
+
+    <section class="grid gap-4 sm:grid-cols-4">
+        <article class="stat-tile">
+            <p class="stat-label">@Model.CurrentMonthLabel</p>
+            <p class="stat-value">@Model.CurrentMonthPoints</p>
+        </article>
+        <article class="stat-tile">
+            <p class="stat-label">All time</p>
+            <p class="stat-value">@Model.AllTimePoints</p>
+        </article>
+        <article class="stat-tile">
+            <p class="stat-label">Months</p>
+            <p class="stat-value">@Model.Months.Count</p>
+        </article>
+        <article class="stat-tile">
+            <p class="stat-label">Handles</p>
+            <p class="stat-value">@handleCount<span class="text-base text-muted">/2</span></p>
+        </article>
+    </section>
+
+    @if (Model.Months.Count == 0)
+    {
+        <section class="card">
+            <div class="card-body">
+                <partial name="_EmptyState" model="@(new EmptyStateModel {
+                    Icon = "fa-solid fa-coins",
+                    Title = "No points yet",
+                    Description = "DS solves, graded C# tasks and bonuses all appear here month by month.",
+                    ActionLabel = "Open points",
+                    ActionHref = Url.Action("Member", "BoardPoints", new { id = Model.Id })
+                })" />
+            </div>
+        </section>
+    }
+    else
+    {
+        @foreach (var month in Model.Months)
+        {
+            <section class="card overflow-hidden">
+                <div class="card-header">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <h2 class="card-title">@month.Label</h2>
+                        <span class="badge @(month.Status == MonthStatus.Open ? "badge-active" : "badge-hidden")">
+                            @(month.Status == MonthStatus.Open ? "Open" : "Closed")
+                        </span>
+                        @if (month.MonthSheetId == Model.CurrentMonthSheetId)
+                        {
+                            <span class="chip">Current month</span>
+                        }
+                    </div>
+                    <span class="nums text-sm font-semibold text-text">@month.Total pts</span>
+                </div>
+
+                <div class="flex flex-wrap gap-2 border-b border-border/60 px-4 py-2.5 text-xs text-muted">
+                    <span>DS <span class="nums text-text">@month.DsPoints</span></span>
+                    <span class="text-muted/40">·</span>
+                    <span>C# <span class="nums text-text">@month.TaskPoints</span></span>
+                    <span class="text-muted/40">·</span>
+                    <span>Bonus <span class="nums text-text">@month.BonusPoints</span></span>
+                    <span class="text-muted/40">·</span>
+                    <span>Adjustments <span class="nums text-text">@month.AdjustmentPoints</span></span>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th scope="col">Type</th>
+                                <th scope="col">Detail</th>
+                                <th scope="col" class="text-right">Base</th>
+                                <th scope="col" class="text-right">Final</th>
+                                <th scope="col">Added</th>
+                                <th scope="col">Flags</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var entry in month.Entries)
+                            {
+                                <tr>
+                                    <td>
+                                        <span class="badge @PointCategoryView.BadgeClass(entry.Category)">
+                                            @PointCategoryView.Label(entry.Category)
+                                        </span>
+                                    </td>
+                                    <td class="text-sm text-text">
+                                        @if (!string.IsNullOrWhiteSpace(entry.SourceLabel))
+                                        {
+                                            <span>@entry.SourceLabel</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">
+                                                @(entry.Category == PointCategory.Bonus ? "Board bonus" : "Manual correction")
+                                            </span>
+                                        }
+                                        @if (!string.IsNullOrWhiteSpace(entry.Reason))
+                                        {
+                                            <p class="mt-0.5 text-xs text-muted">@entry.Reason</p>
+                                        }
+                                    </td>
+                                    <td class="nums text-right text-xs text-muted">@entry.BasePoints</td>
+                                    <td class="nums text-right text-sm @(entry.FinalPoints < 0 ? "text-danger" : "text-text")">
+                                        @entry.FinalPoints.ToString("+#;-#;0")
+                                    </td>
+                                    <td class="whitespace-nowrap text-xs text-muted">
+                                        @TimeZone.FormatLocal(entry.CreatedAtUtc, "d MMM yyyy")
+                                        @if (!string.IsNullOrWhiteSpace(entry.ActorName))
+                                        {
+                                            <span class="block text-[10px] text-muted/60">by @entry.ActorName</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (entry.IsManual)
+                                        {
+                                            <span class="badge badge-pending">Manual</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-xs text-muted">—</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        }
+    }
+
+    </div>

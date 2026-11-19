@@ -1,0 +1,127 @@
+@model BoardContentListViewModel
+@{
+    var total = Model.Pages.Count;
+    var tiles = new[]
+    {
+        ("Published", Model.PublishedCount.ToString(), "fa-solid fa-book-open", "Visible to members"),
+        ("Drafts", Model.DraftCount.ToString(), "fa-solid fa-pen-ruler", "Board only"),
+        ("Topics", total.ToString(), "fa-solid fa-layer-group", "Written by the board")
+    };
+}
+<div class="flex flex-col gap-6">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+            <nav class="flex items-center gap-2 text-xs text-muted" aria-label="Breadcrumb">
+                <a asp-controller="Board" asp-action="Index" class="hover:text-text">Board</a>
+                <i class="fa-solid fa-chevron-right text-[9px]" aria-hidden="true"></i>
+                <span class="text-text">Topics</span>
+            </nav>
+            <h1 class="mt-2 text-[26px] font-semibold leading-tight tracking-tight">Topics</h1>
+        </div>
+        <a asp-controller="BoardContent" asp-action="New" class="btn btn-primary">
+            <i class="fa-solid fa-plus text-xs" aria-hidden="true"></i>
+            New topic
+        </a>
+    </div>
+
+    <section class="grid gap-4 sm:grid-cols-3">
+        @foreach (var (label, value, icon, hint) in tiles)
+        {
+            <article class="stat-tile">
+                <div class="flex items-start justify-between gap-2">
+                    <p class="stat-label">@label</p>
+                    <i class="@icon text-xs text-muted" aria-hidden="true"></i>
+                </div>
+                <p class="stat-value">@value</p>
+                <p class="mt-1 text-xs text-muted">@hint</p>
+            </article>
+        }
+    </section>
+
+    <section class="card overflow-hidden">
+        @if (total == 0)
+        {
+            <div class="card-body">
+                <partial name="_EmptyState" model="@(new EmptyStateModel {
+                    Icon = "fa-solid fa-book-open",
+                    Title = "No topics yet",
+                    Description = "Create the first topic and publish it when it is ready.",
+                    ActionLabel = "Create a topic",
+                    ActionHref = Url.Action("New", "BoardContent")
+                })" />
+            </div>
+        }
+        else
+        {
+            <div class="overflow-x-auto">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Topic</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Updated</th>
+                            <th scope="col" class="text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var entry in Model.Pages)
+                        {
+                            <tr>
+                                <td>
+                                    <a asp-controller="BoardContent" asp-action="Edit" asp-route-id="@entry.Id"
+                                       class="text-sm font-medium text-text hover:text-accent">@entry.Title</a>
+                                </td>
+                                <td>
+                                    @if (entry.IsPublished)
+                                    {
+                                        <span class="badge badge-active">Published</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge badge-hidden">Draft</span>
+                                    }
+                                </td>
+                                <td class="whitespace-nowrap text-xs text-muted">
+                                    <span class="nums">@entry.UpdatedLabel</span>
+                                    @if (!string.IsNullOrWhiteSpace(entry.UpdatedByName))
+                                    {
+                                        <span class="block text-[11px] text-muted/70">@entry.UpdatedByName</span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="flex flex-wrap items-center justify-end gap-1.5">
+                                        @if (entry.IsPublished)
+                                        {
+                                            <a href="@entry.PublicHref" target="_blank" rel="noopener noreferrer"
+                                               class="btn btn-sm">
+                                                <i class="fa-solid fa-arrow-up-right-from-square text-[10px]" aria-hidden="true"></i>
+                                                View
+                                            </a>
+                                        }
+
+                                        <a asp-controller="BoardContent" asp-action="Edit" asp-route-id="@entry.Id"
+                                           class="btn btn-sm">
+                                            <i class="fa-solid fa-pen text-[10px]" aria-hidden="true"></i>
+                                            Edit
+                                        </a>
+
+                                        <form method="post" asp-controller="BoardContent" asp-action="Delete"
+                                              asp-route-id="@entry.Id"
+                                              data-confirm="Deleting removes the topic for everyone; this cannot be undone."
+                                              data-confirm-title="Delete &quot;@entry.Title&quot;?"
+                                              data-confirm-label="Delete topic">
+                                            <button type="submit" class="btn btn-sm btn-danger">
+                                                <i class="fa-regular fa-trash-can text-[10px]" aria-hidden="true"></i>
+                                                Delete
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+</div>

@@ -1,0 +1,161 @@
+@model DsSheetsViewModel
+@{
+    var tiles = new[]
+    {
+        ("Sheets", Model.TotalCount.ToString(), "fa-solid fa-layer-group", "Across every month"),
+        ("Current", Model.ActiveCount.ToString(), "fa-solid fa-bolt", "One at most"),
+        ("Hidden", Model.HiddenCount.ToString(), "fa-solid fa-eye-slash", "Drafts members cannot see")
+    };
+}
+<div class="flex flex-col gap-6">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+            <nav class="flex items-center gap-2 text-xs text-muted" aria-label="Breadcrumb">
+                <a asp-controller="Board" asp-action="Index" class="hover:text-text">Board</a>
+                <i class="fa-solid fa-chevron-right text-[9px]" aria-hidden="true"></i>
+                <span class="text-text">DS sheets</span>
+            </nav>
+            <h1 class="mt-2 text-[26px] font-semibold leading-tight tracking-tight">DS sheets</h1>
+        </div>
+        <div class="flex items-center gap-2">
+            <span class="chip">
+                <i class="fa-regular fa-calendar-days text-[11px] text-muted" aria-hidden="true"></i>
+                @Model.CurrentMonthLabel
+            </span>
+            <a asp-controller="DsSheets" asp-action="New" class="btn btn-primary">
+                <i class="fa-solid fa-plus text-xs" aria-hidden="true"></i>
+                New sheet
+            </a>
+        </div>
+    </div>
+
+    <section class="grid gap-4 sm:grid-cols-3">
+        @foreach (var (label, value, icon, hint) in tiles)
+        {
+            <article class="stat-tile">
+                <div class="flex items-start justify-between gap-2">
+                    <p class="stat-label">@label</p>
+                    <i class="@icon text-xs text-muted" aria-hidden="true"></i>
+                </div>
+                <p class="stat-value">@value</p>
+                <p class="mt-1 text-xs text-muted">@hint</p>
+            </article>
+        }
+    </section>
+
+    <section class="card overflow-hidden">
+        @if (Model.Sheets.Count == 0)
+        {
+            <div class="card-body">
+                <partial name="_EmptyState" model="@(new EmptyStateModel {
+                    Icon = "fa-solid fa-layer-group",
+                    Title = "No DS sheets yet",
+                    Description = "Create the first sheet for this month, add its deadline, and hide it until the problems are ready.",
+                    ActionLabel = "Create a sheet",
+                    ActionHref = Url.Action("New", "DsSheets")
+                })" />
+            </div>
+        }
+        else
+        {
+            <div class="overflow-x-auto">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Sheet</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Deadline</th>
+                            <th scope="col" class="text-right">Problems</th>
+                            <th scope="col" class="text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var sheet in Model.Sheets)
+                        {
+                            <tr>
+                                <td>
+                                    <p class="text-sm font-medium text-text">@sheet.Title</p>
+                                    <p class="mt-0.5 text-xs text-muted">@sheet.MonthLabel</p>
+                                </td>
+                                <td>
+                                    <span class="badge @sheet.StatusBadgeClass">@sheet.StatusLabel</span>
+                                </td>
+                                <td class="whitespace-nowrap text-xs text-muted nums">@sheet.DueLabel</td>
+                                <td class="nums text-right text-muted">@sheet.ProblemCount</td>
+                                <td>
+                                    <div class="flex flex-wrap items-center justify-end gap-1.5">
+                                        <a asp-controller="DsSheets" asp-action="Edit" asp-route-id="@sheet.Id" class="btn btn-sm">
+                                            <i class="fa-solid fa-pen text-[10px]" aria-hidden="true"></i>
+                                            View/Edit
+                                        </a>
+
+                                        @if (sheet.CanActivate)
+                                        {
+                                            var activateMessage = sheet.ActiveTitleInMonth is null
+                                                ? "This sheet becomes the one featured on the dashboard. Members can already see it."
+                                                : $"“{sheet.ActiveTitleInMonth}” will be set as past first. Only one sheet per month can be current.";
+
+                                            <form method="post" asp-controller="DsSheets" asp-action="Activate" asp-route-id="@sheet.Id"
+                                                  data-confirm="@activateMessage"
+                                                  data-confirm-title="Make @sheet.Title current?"
+                                                  data-confirm-label="Set as current"
+                                                  data-confirm-danger="false">
+                                                <button type="submit" class="btn btn-sm"
+                                                    disabled="@(sheet.ProblemCount == 0 ? "disabled" : null)"
+                                                    title="@(sheet.ProblemCount == 0 ? "Add a problem before making this sheet current." : null)">
+                                                    <i class="fa-solid fa-bolt text-[10px]" aria-hidden="true"></i>
+                                                    Set as current
+                                                </button>
+                                            </form>
+                                        }
+                                        else if (sheet.CanDeactivate)
+                                        {
+                                            <form method="post" asp-controller="DsSheets" asp-action="Deactivate" asp-route-id="@sheet.Id"
+                                                  data-confirm="Members keep seeing it and can still solve it until its deadline. It just stops being current."
+                                                  data-confirm-title="Make @sheet.Title past?"
+                                                  data-confirm-label="Set as past"
+                                                  data-confirm-danger="false">
+                                                <button type="submit" class="btn btn-sm">
+                                                    <i class="fa-solid fa-circle-pause text-[10px]" aria-hidden="true"></i>
+                                                    Set as past
+                                                </button>
+                                            </form>
+                                        }
+
+                                        @if (sheet.CanHide)
+                                        {
+                                            <form method="post" asp-controller="DsSheets" asp-action="Hide" asp-route-id="@sheet.Id"
+                                                  data-confirm="Members will not see this sheet at all. Solves and points already credited stay. It also stops being current."
+                                                  data-confirm-title="Hide @sheet.Title?"
+                                                  data-confirm-label="Hide sheet">
+                                                <input type="hidden" name="hidden" value="true" />
+                                                <button type="submit" class="btn btn-sm">
+                                                    <i class="fa-solid fa-eye-slash text-[10px]" aria-hidden="true"></i>
+                                                    Hide
+                                                </button>
+                                            </form>
+                                        }
+                                        else
+                                        {
+                                            <form method="post" asp-controller="DsSheets" asp-action="Hide" asp-route-id="@sheet.Id"
+                                                  data-confirm="Members will see this sheet again, including any problems already on it."
+                                                  data-confirm-title="Unhide @sheet.Title?"
+                                                  data-confirm-label="Unhide"
+                                                  data-confirm-danger="false">
+                                                <input type="hidden" name="hidden" value="false" />
+                                                <button type="submit" class="btn btn-sm">
+                                                    <i class="fa-solid fa-eye text-[10px]" aria-hidden="true"></i>
+                                                    Unhide
+                                                </button>
+                                            </form>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+</div>

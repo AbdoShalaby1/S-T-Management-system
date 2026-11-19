@@ -1,0 +1,26 @@
+@model NavItem
+@{
+    var current = ViewContext.RouteData.Values["controller"]?.ToString();
+    var requestPath = ViewContext.HttpContext.Request.Path.Value ?? "/";
+
+    // Two nav items can share a controller (Standings and Points), so an explicit path wins.
+    var isActive = !Model.Soon && Model.ActivePath is { } activePath
+        ? requestPath.Equals(activePath, StringComparison.OrdinalIgnoreCase)
+            || requestPath.StartsWith(activePath + "/", StringComparison.OrdinalIgnoreCase)
+        : Model.Controller is not null
+            && string.Equals(current, Model.Controller, StringComparison.OrdinalIgnoreCase);
+
+    var href = Model.Soon ? "#" : Model.Href;
+}
+<a href="@href"
+   class="nav-link @(isActive ? "nav-link-active" : string.Empty) @(Model.Soon ? "nav-link-soon" : string.Empty)"
+   aria-current="@(isActive ? "page" : null)"
+   aria-disabled="@(Model.Soon ? "true" : null)"
+   tabindex="@(Model.Soon ? "-1" : null)">
+    <i class="@Model.Icon w-4 shrink-0 text-center text-[13px]" aria-hidden="true"></i>
+    <span class="truncate">@Model.Label</span>
+    @if (!string.IsNullOrEmpty(Model.Badge))
+    {
+        <span class="nav-badge">@Model.Badge</span>
+    }
+</a>

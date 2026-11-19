@@ -1,0 +1,222 @@
+@model ContentFormViewModel
+@{
+    var isEdit = Model.IsEdit;
+    var heading = isEdit ? "Edit topic" : "New topic";
+    var canUpload = isEdit;
+}
+<div class="flex flex-col gap-6">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+            <nav class="flex flex-wrap items-center gap-2 text-xs text-muted" aria-label="Breadcrumb">
+                <a asp-controller="Board" asp-action="Index" class="hover:text-text">Board</a>
+                <i class="fa-solid fa-chevron-right text-[9px]" aria-hidden="true"></i>
+                <a asp-controller="BoardContent" asp-action="Index" class="hover:text-text">Topics</a>
+                <i class="fa-solid fa-chevron-right text-[9px]" aria-hidden="true"></i>
+                <span class="text-text">@(isEdit ? "Edit" : "New")</span>
+            </nav>
+            <h1 class="mt-2 text-[26px] font-semibold leading-tight tracking-tight">@heading</h1>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+            @if (Model.IsPublished)
+            {
+                <span class="badge badge-active">Published</span>
+            }
+            else
+            {
+                <span class="badge badge-hidden">Draft</span>
+            }
+
+            @if (canUpload && Model.IsPublished)
+            {
+                <a href="@Model.PublicHref" target="_blank" rel="noopener noreferrer" class="btn">
+                    <i class="fa-solid fa-arrow-up-right-from-square text-[11px]" aria-hidden="true"></i>
+                    Open topic
+                </a>
+            }
+        </div>
+    </div>
+
+    <form method="post"
+          asp-controller="BoardContent"
+          asp-action="@(isEdit ? "Edit" : "Create")"
+          asp-route-id="@Model.Id"
+          class="card"
+          data-content-form>
+        <div class="card-body flex flex-col gap-5">
+            @if (!ViewData.ModelState.IsValid)
+            {
+                <div asp-validation-summary="ModelOnly"
+                     class="rounded-input border border-danger/30 bg-danger/10 px-3 py-2 text-[13px] leading-relaxed text-danger"></div>
+            }
+
+            <div>
+                <label asp-for="Title" class="label"></label>
+                <input asp-for="Title" class="input" placeholder="Getting started with the committee" autofocus />
+                <span asp-validation-for="Title" class="field-error"></span>
+            </div>
+
+            <div data-md-editor data-preview-url="@Url.Action("Preview", "BoardContent")">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <label asp-for="BodyMarkdown" class="label mb-0"></label>
+                    <div class="flex items-center gap-1.5" role="group" aria-label="Topic editor mode">
+                        <button type="button" class="btn btn-sm btn-ghost" data-md-tab="write" aria-pressed="true">
+                            <i class="fa-solid fa-pen text-[10px]" aria-hidden="true"></i>
+                            Write
+                        </button>
+                        <button type="button" class="btn btn-sm btn-ghost" data-md-tab="preview" aria-pressed="false">
+                            <i class="fa-solid fa-eye text-[10px]" aria-hidden="true"></i>
+                            Preview
+                        </button>
+                    </div>
+                </div>
+
+                <div data-md-pane="write" class="mt-2">
+                    <textarea asp-for="BodyMarkdown" data-md-input data-body-input rows="18"
+                              class="input h-auto min-h-72 py-3 font-mono text-[13px]"
+                              placeholder="### Overview&#10;&#10;What this topic covers...&#10;&#10;### Details&#10;&#10;- First point&#10;- Second point&#10;&#10;```csharp&#10;Console.WriteLine(&quot;hello&quot;);&#10;```"></textarea>
+                    <span asp-validation-for="BodyMarkdown" class="field-error"></span>
+                    <p class="hint">Markdown. Raw HTML is not allowed.</p>
+                </div>
+
+                <div data-md-pane="preview" class="mt-2" hidden>
+                    <div class="min-h-72 rounded-input border border-border bg-surface-2/40 px-4 py-3">
+                        <p class="text-sm text-muted">Press Preview to render the topic.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <label class="flex items-start gap-2.5 text-sm text-muted">
+                <input asp-for="IsPublished" type="checkbox"
+                       class="mt-0.5 h-4 w-4 rounded border-border bg-surface-2 accent-accent" />
+                <span>
+                    <span class="font-medium text-text">Published</span>
+                    <span class="block text-xs leading-relaxed text-muted">
+                        On: visible to members. Off: draft.
+                    </span>
+                </span>
+            </label>
+
+            <div class="flex flex-wrap justify-end gap-2">
+                <a asp-controller="BoardContent" asp-action="Index" class="btn btn-ghost">Cancel</a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fa-solid fa-floppy-disk text-xs" aria-hidden="true"></i>
+                    @(isEdit ? "Save topic" : "Create topic")
+                </button>
+            </div>
+
+            @if (isEdit)
+            {
+                <p class="text-right text-[11px] text-muted/70">
+                    Last updated
+                    <span class="nums">@Model.UpdatedLabel</span>@if (!string.IsNullOrWhiteSpace(Model.UpdatedByName))
+                    {
+                        <span> by @Model.UpdatedByName</span>
+                    }.
+                </p>
+            }
+        </div>
+    </form>
+
+    <section class="card" aria-labelledby="content-images-title">
+        <div class="card-header">
+            <div>
+                <h2 id="content-images-title" class="card-title">Images</h2>
+                <p class="card-meta mt-0.5">PNG, JPEG, GIF or WebP up to 4 MB</p>
+            </div>
+            <span class="chip">
+                <i class="fa-regular fa-image text-[11px] text-muted" aria-hidden="true"></i>
+                <span class="nums">@Model.Images.Count</span> files
+            </span>
+        </div>
+
+        <div class="card-body flex flex-col gap-5">
+            @if (canUpload)
+            {
+                <form method="post"
+                      asp-controller="BoardContent"
+                      asp-action="UploadImage"
+                      enctype="multipart/form-data"
+                      class="flex flex-col gap-3 sm:flex-row sm:items-end"
+                      data-image-form
+                      data-upload-url="@Url.Action("UploadImage", "BoardContent")"
+                      data-page-id="@Model.Id">
+                    <input type="hidden" name="pageId" value="@Model.Id" />
+                    <div class="min-w-0 flex-1">
+                        <label for="content-image-file" class="label">Upload an image</label>
+                        <input id="content-image-file" type="file" name="file"
+                               accept="image/png,image/jpeg,image/gif,image/webp"
+                               class="input h-auto py-2 text-xs file:mr-3 file:rounded file:border-0 file:bg-surface-2 file:px-3 file:py-1.5 file:text-xs file:text-text"
+                               data-image-file required />
+                        <p class="hint">You can also paste an external image URL into the body.</p>
+                    </div>
+                    <button type="submit" class="btn" data-image-submit>
+                        <i class="fa-solid fa-upload text-[11px]" aria-hidden="true"></i>
+                        Upload
+                    </button>
+                </form>
+
+                <p class="hidden rounded-input border border-accent/30 bg-accent/10 px-3 py-2 text-[13px] leading-relaxed text-text"
+                   data-image-status role="status" aria-live="polite"></p>
+
+                @if (!string.IsNullOrWhiteSpace(Model.LastImageUrl))
+                {
+                    <div class="flex flex-wrap items-center justify-between gap-2 rounded-input border border-border bg-surface-2/40 px-3 py-2 text-xs text-muted">
+                        <span class="truncate font-mono text-text">@Model.LastImageUrl</span>
+                        <button type="button" class="btn btn-sm" data-image-insert="@Model.LastImageUrl">
+                            <i class="fa-solid fa-turn-down text-[10px]" aria-hidden="true"></i>
+                            Insert
+                        </button>
+                    </div>
+                }
+
+                @if (Model.Images.Count == 0)
+                {
+                    <p class="text-sm text-muted" data-image-empty>
+                        No images yet. Upload one and it appears here with an Insert button.
+                    </p>
+                }
+                else
+                {
+                    <ul class="grid gap-3 sm:grid-cols-2" data-image-list>
+                        @foreach (var image in Model.Images)
+                        {
+                            <li class="flex items-center gap-3 rounded-input border border-border bg-surface-2/30 p-3">
+                                <img src="@image.Url" alt="" loading="lazy"
+                                     class="h-14 w-14 shrink-0 rounded border border-border object-cover" />
+                                <div class="min-w-0 flex-1">
+                                    <p class="truncate font-mono text-xs text-text">@image.FileName</p>
+                                    <p class="mt-0.5 text-[11px] text-muted nums">@((image.Bytes / 1024.0).ToString("0.#")) KB</p>
+                                </div>
+                                <div class="flex shrink-0 items-center gap-1">
+                                    <button type="button" class="btn btn-sm" data-image-insert="@image.Url"
+                                            title="Insert this image into the body">
+                                        <i class="fa-solid fa-turn-down text-[10px]" aria-hidden="true"></i>
+                                        Insert
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-ghost" data-image-copy="@image.Url"
+                                            title="Copy the image address">
+                                        <i class="fa-regular fa-copy text-[10px]" aria-hidden="true"></i>
+                                    </button>
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                }
+            }
+            else
+            {
+                <p class="text-sm text-muted">
+                    Save the topic once to upload images.
+                </p>
+            }
+        </div>
+    </section>
+</div>
+
+@section Scripts {
+    <script src="~/js/task-editor.js" asp-append-version="true"></script>
+    <script src="~/js/content-editor.js" asp-append-version="true"></script>
+}

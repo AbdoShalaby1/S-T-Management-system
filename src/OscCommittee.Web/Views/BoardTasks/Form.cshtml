@@ -1,0 +1,210 @@
+@model CSharpTaskFormViewModel
+@{
+    var isEdit = Model.IsEdit;
+    var heading = isEdit ? "Edit C# task" : "New C# task";
+}
+<div class="flex flex-col gap-6">
+    <div>
+        <nav class="flex flex-wrap items-center gap-2 text-xs text-muted" aria-label="Breadcrumb">
+            <a asp-controller="Board" asp-action="Index" class="hover:text-text">Board</a>
+            <i class="fa-solid fa-chevron-right text-[9px]" aria-hidden="true"></i>
+            <a asp-controller="BoardTasks" asp-action="Index" class="hover:text-text">C# tasks</a>
+            <i class="fa-solid fa-chevron-right text-[9px]" aria-hidden="true"></i>
+            <span class="text-text">@(isEdit ? "Edit" : "New")</span>
+        </nav>
+        <h1 class="mt-2 text-[26px] font-semibold leading-tight tracking-tight">@heading</h1>
+    </div>
+
+    <form method="post"
+          asp-controller="BoardTasks"
+          asp-action="@(isEdit ? "Edit" : "Create")"
+          asp-route-id="@Model.Id"
+          enctype="multipart/form-data"
+          class="card">
+        <div class="card-body flex flex-col gap-5">
+            @if (!ViewData.ModelState.IsValid)
+            {
+                <div asp-validation-summary="ModelOnly"
+                     class="rounded-input border border-danger/30 bg-danger/10 px-3 py-2 text-[13px] leading-relaxed text-danger"></div>
+            }
+
+            <div>
+                <label asp-for="Title" class="label"></label>
+                <input asp-for="Title" class="input" placeholder="Task 3 — File indexer" autofocus />
+                <span asp-validation-for="Title" class="field-error"></span>
+            </div>
+
+            <div class="grid gap-4 sm:grid-cols-2">
+                <div>
+                    <label asp-for="MonthSheetId" class="label"></label>
+                    <select asp-for="MonthSheetId" class="input">
+                        <option value="">Pick a month...</option>
+                        @foreach (var month in Model.Months)
+                        {
+                            <option value="@month.Id">@month.Label@(month.IsCurrent ? " · current" : string.Empty)</option>
+                        }
+                    </select>
+                    <span asp-validation-for="MonthSheetId" class="field-error"></span>
+                </div>
+
+                <div>
+                    <label asp-for="DueLocal" class="label">Deadline</label>
+                    <input asp-for="DueLocal" type="date" class="input" />
+                    <span asp-validation-for="DueLocal" class="field-error"></span>
+                    <p class="hint">
+                        The deadline is the end of that day in <span class="font-medium text-text">@Model.TimeZoneId</span>.
+                    </p>
+                </div>
+            </div>
+
+            <div data-md-editor data-preview-url="@Url.Action("Preview", "BoardTasks")">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <label asp-for="DescriptionMd" class="label mb-0"></label>
+                    <button type="button" class="btn btn-sm btn-ghost" data-md-toggle aria-pressed="false">
+                        <i class="fa-solid fa-eye text-[10px]" data-md-toggle-icon aria-hidden="true"></i>
+                        <span data-md-toggle-label>Preview</span>
+                    </button>
+                </div>
+
+                <div data-md-pane="write" class="mt-2">
+                    <textarea asp-for="DescriptionMd" data-md-input rows="16"
+                              class="input h-auto min-h-64 py-3 font-mono text-[13px]"
+                              placeholder="### Goal&#10;&#10;Build a console app that...&#10;&#10;### Requirements&#10;&#10;- Reads a folder path&#10;- Prints a tree"></textarea>
+                    <span asp-validation-for="DescriptionMd" class="field-error"></span>
+                    <p class="hint">Markdown. Raw HTML is not allowed.</p>
+                </div>
+
+                <div data-md-pane="preview" class="mt-2" hidden>
+                    <div class="min-h-64 rounded-input border border-border bg-surface-2/40 px-4 py-3">
+                        <p class="text-sm text-muted">Press Preview to render the statement.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="flex flex-col gap-3">
+                <input type="hidden" asp-for="ExistingStarterZipPath" />
+                <input type="hidden" asp-for="ExistingStarterZipFileName" />
+                <input type="hidden" asp-for="ExistingStarterZipSizeBytes" />
+                <div>
+                    <label asp-for="StarterZip" class="label"></label>
+                    <input asp-for="StarterZip" type="file" accept=".zip,application/zip"
+                           class="input h-auto py-2 text-xs file:mr-3 file:rounded file:border-0 file:bg-surface-2 file:px-3 file:py-1.5 file:text-xs file:text-text" />
+                    <span asp-validation-for="StarterZip" class="field-error"></span>
+                    <p class="hint">
+                        Optional. Members download this zip from the task page, build on it, and upload
+                        their own folder when they finish. A new upload replaces the stored zip.
+                    </p>
+                </div>
+
+                @if (Model.HasExistingStarter)
+                {
+                    <div class="rounded-input border border-border bg-surface-2/40 px-3 py-2.5">
+                        <p class="text-xs text-muted">
+                            Current starting code:
+                            <span class="font-medium text-text">@Model.ExistingStarterZipFileName</span>
+                            (@FileBrowserModel.SizeLabel(Model.ExistingStarterZipSizeBytes)). Upload a new
+                            zip to replace it, or tick the box below to remove it.
+                        </p>
+                    </div>
+
+                    <label class="flex items-start gap-2.5 text-sm text-muted">
+                        <input asp-for="ClearStarterZip" type="checkbox"
+                               class="mt-0.5 h-4 w-4 rounded border-border bg-surface-2 accent-accent" />
+                        <span>
+                            <span class="font-medium text-text">Remove the starting code</span>
+                        </span>
+                    </label>
+                }
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="flex flex-col gap-4">
+                <input type="hidden" asp-for="ExistingReferenceFolderPath" />
+                <input type="hidden" asp-for="ExistingReferenceFileCount" />
+                <div>
+                    <label asp-for="ReferenceFiles" class="label"></label>
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        <div>
+                            <p class="text-xs font-medium text-text">Upload a folder</p>
+                            <input type="file" name="ReferenceFiles" webkitdirectory directory multiple
+                                   class="input h-auto py-2 text-xs file:mr-3 file:rounded file:border-0 file:bg-surface-2 file:px-3 file:py-1.5 file:text-xs file:text-text" />
+                            <p class="hint">Every allowed file inside the folder is kept.</p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-medium text-text">Or a single file</p>
+                            <input asp-for="ReferenceFiles" type="file"
+                                   class="input h-auto py-2 text-xs file:mr-3 file:rounded file:border-0 file:bg-surface-2 file:px-3 file:py-1.5 file:text-xs file:text-text" />
+                            <p class="hint">A new upload replaces the stored solution.</p>
+                        </div>
+                    </div>
+                    <span asp-validation-for="ReferenceFiles" class="field-error"></span>
+                    <p class="hint">
+                        Optional. Members see it automatically once the deadline passes, and the AI grader
+                        uses it as the model answer. It is never shown before the deadline.
+                    </p>
+                </div>
+
+                @if (Model.ExistingReferenceFileCount > 0)
+                {
+                    <div class="rounded-input border border-border bg-surface-2/40 px-3 py-2.5">
+                        <p class="text-xs text-muted">
+                            Current solution:
+                            <span class="font-medium text-text">@Model.ExistingReferenceFileCount file@(Model.ExistingReferenceFileCount == 1 ? string.Empty : "s")</span>
+                            stored. Upload a new one to replace it, or tick the box below to remove it.
+                        </p>
+                    </div>
+
+                    <label class="flex items-start gap-2.5 text-sm text-muted">
+                        <input asp-for="ClearReference" type="checkbox"
+                               class="mt-0.5 h-4 w-4 rounded border-border bg-surface-2 accent-accent" />
+                        <span>
+                            <span class="font-medium text-text">Remove the current solution</span>
+                        </span>
+                    </label>
+                }
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="flex flex-col gap-3">
+                <label class="flex items-start gap-2.5 text-sm text-muted">
+                    <input asp-for="IsHidden" type="checkbox"
+                           class="mt-0.5 h-4 w-4 rounded border-border bg-surface-2 accent-accent" />
+                    <span>
+                        <span class="font-medium text-text">Hidden from members</span>
+                        <span class="block text-xs leading-relaxed text-muted">
+                            Members get a 404 for this task and it stops being current. Work already
+                            submitted is kept. Uncheck to publish it again.
+                        </span>
+                    </span>
+                </label>
+
+                <label class="flex items-start gap-2.5 text-sm text-muted">
+                    <input asp-for="IsActive" type="checkbox"
+                           class="mt-0.5 h-4 w-4 rounded border-border bg-surface-2 accent-accent" />
+                    <span>
+                        <span class="font-medium text-text">Current task for this month</span>
+                        <span class="block text-xs leading-relaxed text-muted">
+                            Featured at the top of the member task list.
+                        </span>
+                    </span>
+                </label>
+            </div>
+
+            <div class="flex flex-wrap justify-end gap-2">
+                <a asp-controller="BoardTasks" asp-action="Index" class="btn btn-ghost">Cancel</a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fa-solid fa-floppy-disk text-xs" aria-hidden="true"></i>
+                    @(isEdit ? "Save task" : "Create task")
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script src="~/js/task-editor.js" asp-append-version="true"></script>
+}

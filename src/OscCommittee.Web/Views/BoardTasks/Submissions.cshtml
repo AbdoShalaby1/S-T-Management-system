@@ -1,0 +1,202 @@
+@model CSharpTaskSubmissionsViewModel
+@{
+    var statuses = new (string Value, string Label)[]
+    {
+        ("all", "Any status"),
+        ("graded", "Graded"),
+        ("pending", "Awaiting grading"),
+        ("failed", "Grading failed"),
+        ("late", "Late")
+    };
+
+    var sorts = new (string Value, string Label)[]
+    {
+        ("submitted", "Newest first"),
+        ("member", "Member name"),
+        ("attempt", "Attempt number"),
+        ("score", "Points")
+    };
+}
+<div class="flex flex-col gap-6">
+    <div>
+        <nav class="flex flex-wrap items-center gap-2 text-xs text-muted" aria-label="Breadcrumb">
+            <a asp-controller="Board" asp-action="Index" class="hover:text-text">Board</a>
+            <i class="fa-solid fa-chevron-right text-[9px]" aria-hidden="true"></i>
+            <a asp-controller="BoardTasks" asp-action="Index" class="hover:text-text">C# tasks</a>
+            <i class="fa-solid fa-chevron-right text-[9px]" aria-hidden="true"></i>
+            <span class="text-text">@Model.TaskTitle</span>
+        </nav>
+
+        <div class="mt-2 flex flex-wrap items-end justify-between gap-3">
+            <div>
+                <p class="card-meta">@Model.MonthLabel</p>
+                <h1 class="mt-1 text-[26px] font-semibold leading-tight tracking-tight">@Model.TaskTitle</h1>
+                <div class="mt-2 flex flex-wrap items-center gap-1.5">
+                    @if (Model.IsHidden)
+                    {
+                        <span class="badge badge-hidden">Hidden</span>
+                    }
+                    <span class="chip">@Model.TotalCount attempts</span>
+                    <span class="chip">@Model.MemberCount members</span>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2">
+                <a asp-controller="BoardTasks" asp-action="Detail" asp-route-id="@Model.TaskId" class="btn">
+                    <i class="fa-solid fa-eye text-[10px]" aria-hidden="true"></i>
+                    Task detail
+                </a>
+                <a asp-controller="BoardTasks" asp-action="Edit" asp-route-id="@Model.TaskId" class="btn">
+                    <i class="fa-solid fa-pen text-[10px]" aria-hidden="true"></i>
+                    Edit task
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <section class="grid gap-4 sm:grid-cols-4">
+        <article class="stat-tile">
+            <p class="stat-label">Graded</p>
+            <p class="stat-value">@Model.GradedCount</p>
+        </article>
+        <article class="stat-tile">
+            <p class="stat-label">Awaiting</p>
+            <p class="stat-value">@Model.PendingCount</p>
+        </article>
+        <article class="stat-tile">
+            <p class="stat-label">Failed</p>
+            <p class="stat-value">@Model.FailedCount</p>
+        </article>
+        <article class="stat-tile">
+            <p class="stat-label">Late</p>
+            <p class="stat-value">@Model.LateCount</p>
+        </article>
+    </section>
+
+    <form method="get" asp-controller="BoardTasks" asp-action="Submissions" asp-route-id="@Model.TaskId"
+          class="card flex flex-wrap items-end gap-3 p-4">
+        <div class="min-w-40 flex-1">
+            <label for="filter-query" class="label">Member</label>
+            <input id="filter-query" name="q" value="@Model.Query" class="input"
+                   placeholder="Search by name" />
+        </div>
+
+        <div class="min-w-40 flex-1">
+            <label for="filter-status" class="label">Status</label>
+            <select id="filter-status" name="status" class="input">
+                @foreach (var (value, label) in statuses)
+                {
+                    <option value="@value" selected="@(Model.StatusFilter == value)">@label</option>
+                }
+            </select>
+        </div>
+
+        <div class="min-w-40 flex-1">
+            <label for="filter-sort" class="label">Sort by</label>
+            <select id="filter-sort" name="sort" class="input">
+                @foreach (var (value, label) in sorts)
+                {
+                    <option value="@value" selected="@(Model.Sort == value)">@label</option>
+                }
+            </select>
+        </div>
+
+        <div class="flex gap-2">
+            <button type="submit" class="btn">Apply</button>
+            <a asp-controller="BoardTasks" asp-action="Submissions" asp-route-id="@Model.TaskId"
+               class="btn btn-ghost">Reset</a>
+        </div>
+    </form>
+
+    <section class="card overflow-hidden">
+        <div class="card-header">
+            <h2 class="card-title">Attempts</h2>
+            <span class="chip">Best attempt per member is marked</span>
+        </div>
+
+        @if (Model.Attempts.Count == 0)
+        {
+            <div class="card-body">
+                <partial name="_EmptyState" model="@(new EmptyStateModel {
+                    Icon = "fa-solid fa-inbox",
+                    Title = Model.HasFilters ? "No attempts match" : "No attempts yet",
+                    Description = Model.HasFilters
+                        ? "Try a different status, clear the name filter, or reset the sort."
+                        : "Member uploads appear here as soon as the folder is stored.",
+                    ActionLabel = Model.HasFilters ? "Clear filters" : null,
+                    ActionHref = Model.HasFilters
+                        ? Url.Action("Submissions", "BoardTasks", new { id = Model.TaskId })
+                        : null
+                })" />
+            </div>
+        }
+        else
+        {
+            <div class="overflow-x-auto">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Member</th>
+                            <th scope="col">Attempt</th>
+                            <th scope="col">Submitted</th>
+                            <th scope="col" class="text-right">Files</th>
+                            <th scope="col">Late</th>
+                            <th scope="col">Status</th>
+                            <th scope="col" class="text-right">Score</th>
+                            <th scope="col" class="text-right">Points</th>
+                            <th scope="col" class="text-right">Review</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var attempt in Model.Attempts)
+                        {
+                            <tr class="@(attempt.IsBest ? "bg-surface-2/40" : null)">
+                                <td>
+                                    <div class="flex items-center gap-2">
+                                        <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-2 text-[10px] font-semibold uppercase text-muted"
+                                              aria-hidden="true">@attempt.Initials</span>
+                                        <span class="text-sm text-text">@attempt.MemberName</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <a asp-controller="Submissions" asp-action="Review" asp-route-id="@attempt.Id"
+                                       class="nums text-sm font-medium text-text hover:text-accent">
+                                        #@attempt.AttemptNumber
+                                    </a>
+                                    @if (attempt.IsBest)
+                                    {
+                                        <span class="badge badge-graded ml-1.5">Best</span>
+                                    }
+                                </td>
+                                <td class="nums whitespace-nowrap text-xs text-muted">@attempt.SubmittedLabel</td>
+                                <td class="nums text-right text-xs text-muted">@attempt.FileCount</td>
+                                <td>
+                                    @if (attempt.IsLate)
+                                    {
+                                        <span class="badge badge-late">Late</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-xs text-muted">—</span>
+                                    }
+                                </td>
+                                <td>
+                                    <span class="badge @attempt.StatusBadgeClass">@attempt.StatusLabel</span>
+                                </td>
+                                <td class="nums text-right text-sm text-text">@attempt.ScoreLabel</td>
+                                <td class="nums text-right text-sm text-text">@attempt.PointsLabel</td>
+                                <td class="text-right">
+                                    <a asp-controller="Submissions" asp-action="Review" asp-route-id="@attempt.Id"
+                                       class="btn btn-sm">
+                                        Review
+                                        <i class="fa-solid fa-chevron-right text-[9px]" aria-hidden="true"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+</div>

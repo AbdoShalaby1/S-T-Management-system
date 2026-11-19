@@ -1,0 +1,318 @@
+@model StandingsDetailViewModel
+@{
+    var selected = Model.SelectedTotals;
+}
+<div class="flex flex-col gap-4">
+    <section class="card">
+        <div class="card-body flex flex-wrap items-start justify-between gap-4">
+            <div class="flex items-start gap-3">
+                <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent-soft text-sm font-semibold uppercase text-accent"
+                      aria-hidden="true">@Model.SelectedMemberInitials</span>
+                <div>
+                    <h2 class="text-xl font-semibold tracking-tight text-text">@Model.SelectedMemberName</h2>
+                    <div class="mt-1.5 flex flex-wrap items-center gap-1.5">
+                        <span class="badge @Model.SelectedMemberStatusBadgeClass">@Model.SelectedMemberStatusLabel</span>
+                        <span class="chip">Joined @Model.RegisteredLabel</span>
+                        @if (Model.SelectedMemberStatus == UserStatus.Deactivated)
+                        {
+                            <span class="chip">Shown to the board only</span>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <form method="get" action="@Model.FilterHref"
+          class="card card-body grid gap-3 @(Model.CanPickMember ? "sm:grid-cols-[1fr_1fr_auto]" : "sm:grid-cols-[1fr_auto]") sm:items-end"
+          aria-label="@(Model.CanPickMember ? "Choose member and month" : "Choose month")">
+        @if (Model.CanPickMember)
+        {
+            <input type="hidden" name="view" value="detail" />
+        }
+        <input type="hidden" name="tab" value="@Model.TabSlug" />
+        @if (Model.IncludeDeactivated)
+        {
+            <input type="hidden" name="includeDeactivated" value="true" />
+        }
+
+        @if (Model.CanPickMember)
+        {
+            <div>
+                <label for="standings-member" class="label">Member</label>
+                <select id="standings-member" name="member" class="input">
+                    @foreach (var choice in Model.Members)
+                    {
+                        <option value="@choice.Id" selected="@(choice.IsSelected ? "selected" : null)">@choice.Label</option>
+                    }
+                </select>
+            </div>
+        }
+
+        <div>
+            <label for="standings-month" class="label">Month</label>
+            @if (Model.Months.Count == 0)
+            {
+                <select id="standings-month" class="input" disabled>
+                    <option>No months yet</option>
+                </select>
+            }
+            else
+            {
+                <select id="standings-month" name="month" class="input">
+                    @foreach (var month in Model.Months)
+                    {
+                        <option value="@month.Value" selected="@(month.IsSelected ? "selected" : null)">@month.Label</option>
+                    }
+                </select>
+            }
+        </div>
+
+        <button type="submit" class="btn btn-primary">
+            <i class="fa-solid fa-filter text-xs" aria-hidden="true"></i>
+            Show
+        </button>
+    </form>
+
+    <section class="card overflow-hidden" aria-label="Month by month">
+        <div class="card-header">
+            <h2 class="card-title">Month by month</h2>
+            <span class="chip">
+                <span class="nums">@Model.MonthRows.Count</span>
+                @(Model.MonthRows.Count == 1 ? "month" : "months")
+            </span>
+        </div>
+
+        @if (Model.MonthRows.Count == 0)
+        {
+            <div class="card-body">
+                <partial name="_EmptyState" model="@(new EmptyStateModel {
+                    Icon = "fa-solid fa-calendar-xmark",
+                    Title = "No points yet",
+                    Description = "This member has no ledger rows in any month so far."
+                })" />
+            </div>
+        }
+        else
+        {
+            <div class="overflow-x-auto">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Month</th>
+                            <th scope="col" class="text-right">DS solved</th>
+                            <th scope="col" class="text-right">DS points</th>
+                            <th scope="col" class="text-right">Tasks solved</th>
+                            <th scope="col" class="text-right">Task points</th>
+                            <th scope="col" class="text-right">Bonus</th>
+                            <th scope="col" class="text-right">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in Model.MonthRows)
+                        {
+                            <tr class="@(row.IsSelected ? "bg-accent-soft/25" : null)">
+                                <td>
+                                    <a href="@row.Href" class="flex flex-wrap items-center gap-2 text-sm font-medium text-text hover:text-accent">
+                                        @row.Label
+                                        <span class="badge @(row.Status == MonthStatus.Open ? "badge-active" : "badge-hidden")">
+                                            @(row.Status == MonthStatus.Open ? "Open" : "Closed")
+                                        </span>
+                                    </a>
+                                </td>
+                                <td class="nums text-right text-sm text-muted">@row.DsSolved</td>
+                                <td class="nums text-right text-sm text-text">@row.DsPoints</td>
+                                <td class="nums text-right text-sm text-muted">@row.TasksSolved</td>
+                                <td class="nums text-right text-sm text-text">@row.TaskPoints</td>
+                                <td class="nums text-right text-sm text-muted">@row.BonusPoints</td>
+                                <td class="nums text-right text-sm font-semibold text-text">@row.Total</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+
+    @if (Model.SelectedMonthId is null)
+    {
+        <partial name="_EmptyState" model="@(new EmptyStateModel {
+            Icon = "fa-solid fa-calendar",
+            Title = "No month sheet exists",
+            Description = "Standings fill in once the board opens a month."
+        })" />
+    }
+    else if (selected is not null)
+    {
+        <section aria-label="Selected month totals">
+            <div class="mb-3 flex flex-wrap items-center gap-2">
+                <h2 class="section-title">@Model.SelectedMonthLabel</h2>
+                <span class="badge @(Model.SelectedMonthIsOpen ? "badge-active" : "badge-hidden")">
+                    @(Model.SelectedMonthIsOpen ? "Open" : "Closed")
+                </span>
+            </div>
+
+            <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <div class="stat-tile">
+                    <p class="stat-label">DS points</p>
+                    <p class="stat-value">@selected.DsPoints</p>
+                    <p class="mt-1 text-xs text-muted"><span class="nums">@selected.DsSolved</span> solved</p>
+                </div>
+                <div class="stat-tile">
+                    <p class="stat-label">Task points</p>
+                    <p class="stat-value">@selected.TaskPoints</p>
+                    <p class="mt-1 text-xs text-muted"><span class="nums">@selected.TasksSolved</span> solved</p>
+                </div>
+                <div class="stat-tile">
+                    <p class="stat-label">Bonus</p>
+                    <p class="stat-value">@selected.BonusPoints</p>
+                    <p class="mt-1 text-xs text-muted">Bonuses and adjustments</p>
+                </div>
+                <div class="stat-tile">
+                    <p class="stat-label">Total</p>
+                    <p class="stat-value">@selected.Total</p>
+                    <p class="mt-1 text-xs text-muted">Sum of the ledger</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="card overflow-hidden" aria-label="DS sheets">
+            <div class="card-header">
+                <h2 class="card-title">DS sheets</h2>
+                <span class="chip">Counts only</span>
+            </div>
+            @if (Model.Sheets.Count == 0)
+            {
+                <div class="card-body">
+                    <p class="text-sm text-muted">No DS sheets belong to this month.</p>
+                </div>
+            }
+            else
+            {
+                <div class="overflow-x-auto">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th scope="col">Sheet</th>
+                                <th scope="col" class="text-right">Solved / total</th>
+                                <th scope="col" class="text-right">Points</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var sheet in Model.Sheets)
+                            {
+                                <tr>
+                                    <td class="text-sm text-text">@sheet.Title</td>
+                                    <td class="nums text-right text-sm">
+                                        <span class="text-text">@sheet.Solved</span>
+                                        <span class="text-muted">/ @sheet.Total</span>
+                                    </td>
+                                    <td class="nums text-right text-sm font-medium text-text">@sheet.Points</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+
+        <div class="grid gap-4 lg:grid-cols-2">
+            <section class="card overflow-hidden" aria-label="C# tasks">
+                <div class="card-header">
+                    <h2 class="card-title">C# tasks</h2>
+                    <span class="badge badge-hidden">Results only</span>
+                </div>
+                @if (Model.Tasks.Count == 0)
+                {
+                    <div class="card-body">
+                        <p class="text-sm text-muted">No tasks belong to this month.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="divide-y divide-border/60">
+                        @foreach (var task in Model.Tasks)
+                        {
+                            <div class="flex flex-wrap items-start justify-between gap-3 px-4 py-3">
+                                <div class="min-w-0">
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <a href="@task.TaskHref" class="truncate text-sm font-medium text-text hover:text-accent">
+                                            @task.Title
+                                        </a>
+                                        <span class="badge @task.StatusBadgeClass">@task.StatusLabel</span>
+                                        @if (task.IsLate)
+                                        {
+                                            <span class="badge badge-late">Late</span>
+                                        }
+                                    </div>
+                                    <p class="mt-1 text-[11px] text-muted">
+                                        @task.AttemptsLabel
+                                        @if (task.AttemptHref is not null)
+                                        {
+                                            <span> &middot; </span>
+                                            <a href="@task.AttemptHref" class="font-medium text-accent hover:text-accent-hover">
+                                                Review attempt
+                                            </a>
+                                        }
+                                    </p>
+                                </div>
+                                <div class="shrink-0 text-right">
+                                    <p class="nums text-sm font-semibold text-text">@task.ScoreLabel</p>
+                                    <p class="mt-0.5 text-[11px] text-muted"><span class="nums">@task.Points</span> pts</p>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </section>
+
+            <section class="card overflow-hidden" aria-label="Bonuses and adjustments">
+                <div class="card-header">
+                    <h2 class="card-title">Bonuses</h2>
+                    <span class="chip">
+                        <span class="nums">@Model.Bonuses.Count</span>
+                        @(Model.Bonuses.Count == 1 ? "entry" : "entries")
+                    </span>
+                </div>
+                @if (Model.Bonuses.Count == 0)
+                {
+                    <div class="card-body">
+                        <p class="text-sm text-muted">No bonuses or adjustments in this month.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="divide-y divide-border/60">
+                        @foreach (var bonus in Model.Bonuses)
+                        {
+                            <div class="flex flex-wrap items-start justify-between gap-3 px-4 py-3">
+                                <div class="min-w-0">
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <span class="badge @bonus.BadgeClass">@bonus.Label</span>
+                                        @if (bonus.IsManual)
+                                        {
+                                            <span class="badge badge-hidden">Manual</span>
+                                        }
+                                        <span class="text-[11px] text-muted">@bonus.AddedLabel</span>
+                                    </div>
+                                    @if (!string.IsNullOrWhiteSpace(bonus.Reason))
+                                    {
+                                        <p class="mt-1 text-xs leading-relaxed text-muted">@bonus.Reason</p>
+                                    }
+                                    else
+                                    {
+                                        <p class="mt-1 text-xs text-muted/70">No reason given.</p>
+                                    }
+                                </div>
+                                <p class="nums shrink-0 text-sm font-semibold @(bonus.Points < 0 ? "text-danger" : "text-text")">
+                                    @bonus.Points.ToString("+#;-#;0")
+                                </p>
+                            </div>
+                        }
+                    </div>
+                }
+            </section>
+        </div>
+    }
+
+    </div>
